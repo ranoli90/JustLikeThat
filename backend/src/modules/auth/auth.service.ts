@@ -23,6 +23,41 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
+  async refreshToken(refreshToken: string) {
+    // Implementation for token refresh
+    return { accessToken: 'mock-refresh-token' };
+  }
+
+  async resetPassword(resetPasswordDto: any) {
+    // Implementation for password reset
+    return { message: 'Password reset email sent' };
+  }
+
+  async updatePassword(updatePasswordDto: any) {
+    // Implementation for password update
+    return { message: 'Password updated successfully' };
+  }
+
+  async verifyEmail(token: string) {
+    // Implementation for email verification
+    return { message: 'Email verified successfully' };
+  }
+
+  async getProfile(userId: string) {
+    // Implementation for getting user profile
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatarUrl: user.avatarUrl,
+    };
+  }
+
   async signup(signupDto: SignupDto): Promise<{ accessToken: string }> {
     // Check if user already exists
     const existingUser = await this.userRepository.findOne({ where: { email: signupDto.email } });

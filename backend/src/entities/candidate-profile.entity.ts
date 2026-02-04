@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, OneToMany } from 'typeorm';
 import { User } from './user.entity';
+import { Persona } from './persona.entity';
 
 @Entity('candidate_profiles')
 export class CandidateProfile {
@@ -9,6 +10,9 @@ export class CandidateProfile {
   @OneToOne(() => User, (user) => user.profile)
   @JoinColumn()
   user: User;
+
+  @OneToMany(() => Persona, (persona) => persona.profile)
+  personas: Persona[];
 
   @Column({ nullable: true })
   headline: string;

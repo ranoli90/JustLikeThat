@@ -30,6 +30,16 @@ export const authAPI = {
     const response = await api.post('/auth/signup', data);
     return response.data;
   },
+  
+  verifyEmail: async (email: string, code: string): Promise<{ success: boolean }> => {
+    const response = await api.post('/auth/verify-email', { email, code });
+    return response.data;
+  },
+  
+  resendVerificationCode: async (email: string): Promise<{ success: boolean }> => {
+    const response = await api.post('/auth/resend-verification', { email });
+    return response.data;
+  },
 };
 
 // User API
@@ -75,6 +85,156 @@ export const profileAPI = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data;
+  },
+  
+  getPersonas: async (): Promise<any[]> => {
+    const response = await api.get('/profiles/personas');
+    return response.data;
+  },
+  
+  createPersona: async (data: any): Promise<any> => {
+    const response = await api.post('/profiles/personas', data);
+    return response.data;
+  },
+  
+  updatePersona: async (id: number, data: any): Promise<any> => {
+    const response = await api.patch(`/profiles/personas/${id}`, data);
+    return response.data;
+  },
+  
+  deletePersona: async (id: number): Promise<void> => {
+    await api.delete(`/profiles/personas/${id}`);
+  },
+};
+
+// Matching API
+export const matchingAPI = {
+  getJobMatches: async (): Promise<any[]> => {
+    const response = await api.get('/matching/matches');
+    return response.data;
+  },
+  
+  getMatchDetails: async (matchId: number): Promise<any> => {
+    const response = await api.get(`/matching/matches/${matchId}`);
+    return response.data;
+  },
+  
+  getMatchScores: async (): Promise<any[]> => {
+    const response = await api.get('/matching/scores');
+    return response.data;
+  },
+};
+
+// Application API
+export const applicationAPI = {
+  getApplications: async (): Promise<any[]> => {
+    const response = await api.get('/applications');
+    return response.data;
+  },
+  
+  getApplicationById: async (id: number): Promise<any> => {
+    const response = await api.get(`/applications/${id}`);
+    return response.data;
+  },
+  
+  createApplication: async (data: any): Promise<any> => {
+    const response = await api.post('/applications', data);
+    return response.data;
+  },
+  
+  updateApplicationStatus: async (id: number, status: string): Promise<any> => {
+    const response = await api.patch(`/applications/${id}`, { status });
+    return response.data;
+  },
+  
+  deleteApplication: async (id: number): Promise<void> => {
+    await api.delete(`/applications/${id}`);
+  },
+};
+
+// Automation API
+export const automationAPI = {
+  getAutomationConfig: async (): Promise<any> => {
+    const response = await api.get('/automation/config');
+    return response.data;
+  },
+  
+  updateAutomationConfig: async (data: any): Promise<any> => {
+    const response = await api.patch('/automation/config', data);
+    return response.data;
+  },
+  
+  getAutomationRules: async (): Promise<any[]> => {
+    const response = await api.get('/automation/rules');
+    return response.data;
+  },
+  
+  createAutomationRule: async (data: any): Promise<any> => {
+    const response = await api.post('/automation/rules', data);
+    return response.data;
+  },
+  
+  updateAutomationRule: async (id: number, data: any): Promise<any> => {
+    const response = await api.patch(`/automation/rules/${id}`, data);
+    return response.data;
+  },
+  
+  deleteAutomationRule: async (id: number): Promise<void> => {
+    await api.delete(`/automation/rules/${id}`);
+  },
+};
+
+// Notification API
+export const notificationAPI = {
+  getNotificationSettings: async (): Promise<any> => {
+    const response = await api.get('/notifications/settings');
+    return response.data;
+  },
+  
+  updateNotificationSettings: async (data: any): Promise<any> => {
+    const response = await api.patch('/notifications/settings', data);
+    return response.data;
+  },
+  
+  getNotifications: async (): Promise<any[]> => {
+    const response = await api.get('/notifications');
+    return response.data;
+  },
+  
+  markNotificationRead: async (id: number): Promise<void> => {
+    await api.patch(`/notifications/${id}`, { read: true });
+  },
+  
+  deleteNotification: async (id: number): Promise<void> => {
+    await api.delete(`/notifications/${id}`);
+  },
+};
+
+// Security API
+export const securityAPI = {
+  getSecuritySettings: async (): Promise<any> => {
+    const response = await api.get('/security/settings');
+    return response.data;
+  },
+  
+  updateSecuritySettings: async (data: any): Promise<any> => {
+    const response = await api.patch('/security/settings', data);
+    return response.data;
+  },
+  
+  enableTwoFactorAuth: async (): Promise<any> => {
+    const response = await api.post('/security/two-factor/enable');
+    return response.data;
+  },
+  
+  disableTwoFactorAuth: async (): Promise<any> => {
+    const response = await api.post('/security/two-factor/disable');
+    return response.data;
+  },
+  
+  verifyTwoFactorCode: async (code: string): Promise<{ success: boolean }> => {
+    const response = await api.post('/security/two-factor/verify', { code });
     return response.data;
   },
 };
