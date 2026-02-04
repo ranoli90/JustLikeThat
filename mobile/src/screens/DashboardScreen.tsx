@@ -12,6 +12,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/authStore';
 import { useOfflineSyncManager } from '../hooks/useOfflineSync';
+import { StatusBadge } from '../components/StatusBadge';
+import { getTimeOfDay } from '../utils/helpers';
 
 interface DashboardStats {
   applications: number;
@@ -23,7 +25,7 @@ interface DashboardStats {
 const DashboardScreen: React.FC = () => {
   const navigation = useNavigation();
   const { user, logout } = useAuthStore();
-  const { isOnline, pendingChanges, lastSyncTime } = useOfflineSyncManager();
+  const { isOnline, pendingChanges, syncNow } = useOfflineSyncManager();
   const [refreshing, setRefreshing] = React.useState(false);
 
   const stats: DashboardStats = {
@@ -46,8 +48,11 @@ const DashboardScreen: React.FC = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setRefreshing(false);
+    try {
+      await syncNow();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -64,13 +69,21 @@ const DashboardScreen: React.FC = () => {
             <Text style={styles.userName}>{user?.firstName || 'User'}</Text>
           </View>
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconButton}>
+            <TouchableOpacity 
+              style={styles.iconButton}
+              accessibilityLabel="Notifications"
+              accessibilityHint="View your notifications"
+            >
               <Ionicons name="notifications-outline" size={24} color="#1F2937" />
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>3</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={logout}>
+            <TouchableOpacity 
+              style={styles.iconButton} 
+              onPress={logout}
+              accessibilityLabel="Log out"
+            >
               <Ionicons name="log-out-outline" size={24} color="#1F2937" />
             </TouchableOpacity>
           </View>
@@ -130,13 +143,17 @@ const DashboardScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Upcoming Interviews</Text>
-            <TouchableOpacity>
+            <TouchableOpacity accessibilityLabel="See all interviews">
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
 
           {upcomingInterviews.map((interview) => (
-            <TouchableOpacity key={interview.id} style={styles.interviewCard}>
+            <TouchableOpacity 
+              key={interview.id} 
+              style={styles.interviewCard}
+              accessibilityLabel={`Interview at ${interview.company} for ${interview.position}`}
+            >
               <View style={styles.interviewIcon}>
                 <Ionicons
                   name={interview.type === 'video' ? 'videocam' : 'call'}
@@ -149,7 +166,10 @@ const DashboardScreen: React.FC = () => {
                 <Text style={styles.interviewPosition}>{interview.position}</Text>
                 <Text style={styles.interviewDate}>{interview.date}</Text>
               </View>
-              <TouchableOpacity style={styles.joinButton}>
+              <TouchableOpacity 
+                style={styles.joinButton}
+                accessibilityLabel="Prepare for interview"
+              >
                 <Text style={styles.joinButtonText}>Prepare</Text>
               </TouchableOpacity>
             </TouchableOpacity>
@@ -160,7 +180,10 @@ const DashboardScreen: React.FC = () => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Applications</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Applications' as never)}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Applications' as never)}
+              accessibilityLabel="See all applications"
+            >
               <Text style={styles.seeAllText}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -170,15 +193,14 @@ const DashboardScreen: React.FC = () => {
               key={app.id}
               style={styles.applicationCard}
               onPress={() => navigation.navigate('ApplicationDetail' as never, { id: app.id })}
+              accessibilityLabel={`Application at ${app.company} for ${app.position}`}
             >
               <View style={styles.applicationInfo}>
                 <Text style={styles.applicationCompany}>{app.company}</Text>
                 <Text style={styles.applicationPosition}>{app.position}</Text>
                 <Text style={styles.applicationDate}>{app.date}</Text>
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(app.status) }]}>
-                <Text style={styles.statusText}>{app.status}</Text>
-              </View>
+              <StatusBadge status={app.status} />
             </TouchableOpacity>
           ))}
         </View>
@@ -188,6 +210,7 @@ const DashboardScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Search' as never)}
+            accessibilityLabel="Find jobs"
           >
             <Ionicons name="search" size={24} color="#4F46E5" />
             <Text style={styles.quickActionText}>Find Jobs</Text>
@@ -196,17 +219,24 @@ const DashboardScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.quickActionButton}
             onPress={() => navigation.navigate('Interview' as never)}
+            accessibilityLabel="Interview practice"
           >
             <Ionicons name="school" size={24} color="#4F46E5" />
             <Text style={styles.quickActionText}>Practice</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickActionButton}>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            accessibilityLabel="View resumes"
+          >
             <Ionicons name="document-text-outline" size={24} color="#4F46E5" />
             <Text style={styles.quickActionText}>Resumes</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickActionButton}>
+          <TouchableOpacity 
+            style={styles.quickActionButton}
+            accessibilityLabel="View analytics"
+          >
             <Ionicons name="analytics-outline" size={24} color="#4F46E5" />
             <Text style={styles.quickActionText}>Analytics</Text>
           </TouchableOpacity>
@@ -214,26 +244,6 @@ const DashboardScreen: React.FC = () => {
       </ScrollView>
     </SafeAreaView>
   );
-};
-
-const getTimeOfDay = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'morning';
-  if (hour < 17) return 'afternoon';
-  return 'evening';
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'interview':
-      return '#10B981';
-    case 'screening':
-      return '#F59E0B';
-    case 'submitted':
-      return '#3B82F6';
-    default:
-      return '#6B7280';
-  }
 };
 
 const styles = StyleSheet.create({
@@ -433,17 +443,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     marginTop: 4,
-  },
-  statusBadge: {
-    borderRadius: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 12,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'capitalize',
   },
   quickActions: {
     flexDirection: 'row',

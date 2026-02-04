@@ -4,6 +4,8 @@ import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 import { Notification } from '../types';
+import config from '../config';
+import { logger } from '../utils';
 
 interface UseNotificationsReturn {
   isLoading: boolean;
@@ -44,7 +46,7 @@ export const useNotificationSetup = (): { isLoading: boolean; setupNotifications
       }
 
       const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: 'YOUR_PROJECT_ID',
+        projectId: config.expoProjectId || 'YOUR_PROJECT_ID',
       });
       
       const token = tokenData.data;

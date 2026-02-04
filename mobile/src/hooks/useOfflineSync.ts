@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OfflineAction, SyncStatus } from '../types';
 import { useAuthStore } from '../store/authStore';
+import { apiClient } from '../services';
+import { logger } from '../utils';
+import { getApiUrl } from '../config';
+import { MAX_RETRY_ATTEMPTS, SYNC_DEBOUNCE_MS } from '../constants/colors';
 
 interface UseOfflineSyncReturn extends SyncStatus {
   queueAction: (action: Omit<OfflineAction, 'id' | 'timestamp' | 'synced'>) => Promise<void>;
@@ -15,20 +19,37 @@ export const useOfflineSyncManager = (): UseOfflineSyncReturn => {
   const [syncInProgress, setSyncInProgress] = useState(false);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const { token, refreshToken } = useAuthStore();
+  const { token, refreshAuthToken } = useAuthStore();
+  const retryCounts = useRef<Record<string, number>>({});
+
+  // Debounce sync attempts
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
+      const wasOffline = !isOnline;
       setIsOnline(state.isConnected ?? false);
-      if (state.isConnected && pendingChanges > 0) {
-        syncNow();
+      
+      if (state.isConnected && wasOffline && pendingChanges > 0) {
+        // Debounce sync when coming back online
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+        }
+        syncTimeoutRef.current = setTimeout(() => {
+          syncNow();
+        }, SYNC_DEBOUNCE_MS);
       }
     });
 
     loadPendingChanges();
 
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      unsubscribe();
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [isOnline, pendingChanges]);
 
   const loadPendingChanges = async () => {
     try {
@@ -38,7 +59,7 @@ export const useOfflineSyncManager = (): UseOfflineSyncReturn => {
         setPendingChanges(actions.filter((a: OfflineAction) => !a.synced).length);
       }
     } catch (error) {
-      console.error('Error loading pending changes:', error);
+      logger.error('Error loading pending changes:', error);
     }
   };
 
@@ -56,21 +77,25 @@ export const useOfflineSyncManager = (): UseOfflineSyncReturn => {
       actions.push(newAction);
       await AsyncStorage.setItem('offline_actions', JSON.stringify(actions));
       setPendingChanges((prev) => prev + 1);
+      retryCounts.current[newAction.id] = 0;
 
       if (isOnline) {
         await syncAction(newAction);
       }
     } catch (error) {
-      console.error('Error queuing action:', error);
+      logger.error('Error queuing action:', error);
     }
   };
 
-  const syncAction = async (action: OfflineAction): Promise<boolean> => {
+  const syncAction = async (action: OfflineAction, retryCount = 0): Promise<boolean> => {
+    const baseUrl = getApiUrl('');
+    
     try {
-      const endpoint = `https://api.simpleasthat.com/${action.entity}`;
+      const endpoint = `${baseUrl}/${action.entity}`;
+      const method = action.type === 'create' ? 'POST' : action.type === 'update' ? 'PUT' : 'DELETE';
       
       const response = await fetch(endpoint, {
-        method: action.type === 'create' ? 'POST' : action.type === 'update' ? 'PUT' : 'DELETE',
+        method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -79,18 +104,34 @@ export const useOfflineSyncManager = (): UseOfflineSyncReturn => {
       });
 
       if (response.status === 401) {
-        await refreshToken();
+        // Try to refresh token
+        await refreshAuthToken();
         return false;
+      }
+
+      if (!response.ok && retryCount < MAX_RETRY_ATTEMPTS) {
+        // Exponential backoff
+        const delay = Math.pow(2, retryCount) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return syncAction(action, retryCount + 1);
       }
 
       return response.ok;
     } catch (error) {
-      console.error('Error syncing action:', error);
+      logger.error('Error syncing action:', error);
+      
+      if (retryCount < MAX_RETRY_ATTEMPTS) {
+        // Exponential backoff
+        const delay = Math.pow(2, retryCount) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return syncAction(action, retryCount + 1);
+      }
+      
       return false;
     }
   };
 
-  const syncNow = async () => {
+  const syncNow = useCallback(async () => {
     if (!isOnline || syncInProgress) return;
 
     setSyncInProgress(true);
@@ -110,6 +151,15 @@ export const useOfflineSyncManager = (): UseOfflineSyncReturn => {
         
         if (success) {
           action.synced = true;
+          retryCounts.current[action.id] = 0;
+        } else {
+          retryCounts.current[action.id] = (retryCounts.current[action.id] || 0) + 1;
+          
+          // Mark as failed if max retries exceeded
+          if (retryCounts.current[action.id] >= MAX_RETRY_ATTEMPTS) {
+            action.synced = true; // Mark as processed to avoid endless retrying
+            logger.warn('Action exceeded max retries, marking as processed:', action.id);
+          }
         }
       }
 
@@ -119,15 +169,16 @@ export const useOfflineSyncManager = (): UseOfflineSyncReturn => {
       setPendingChanges(stillPending);
       setLastSyncTime(new Date());
     } catch (error) {
-      console.error('Error during sync:', error);
+      logger.error('Error during sync:', error);
     } finally {
       setSyncInProgress(false);
     }
-  };
+  }, [isOnline, syncInProgress, token]);
 
   const clearPendingActions = async () => {
     await AsyncStorage.removeItem('offline_actions');
     setPendingChanges(0);
+    retryCounts.current = {};
   };
 
   return {

@@ -3,10 +3,13 @@ import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User } from '../types';
+import { authService, apiClient } from '../services';
+import { handleApiError } from '../utils';
 
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   biometricsEnabled: boolean;
@@ -20,12 +23,13 @@ interface AuthState {
   enableBiometrics: () => Promise<boolean>;
   disableBiometrics: () => Promise<void>;
   updateUser: (user: Partial<User>) => Promise<void>;
-  refreshToken: () => Promise<void>;
+  refreshAuthToken: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
+  refreshToken: null,
   isLoading: true,
   isAuthenticated: false,
   biometricsEnabled: false,
@@ -34,13 +38,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initializeAuth: async () => {
     try {
       const storedToken = await SecureStore.getItemAsync('auth_token');
+      const storedRefreshToken = await SecureStore.getItemAsync('refresh_token');
       const storedUser = await AsyncStorage.getItem('user_data');
       const biometricsEnabled = (await AsyncStorage.getItem('biometrics_enabled')) === 'true';
 
       if (storedToken && storedUser) {
+        apiClient.setToken(storedToken);
         const user = JSON.parse(storedUser);
         set({
           token: storedToken,
+          refreshToken: storedRefreshToken,
           user,
           isAuthenticated: true,
           biometricsEnabled,
@@ -58,30 +65,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   login: async (email: string, password: string) => {
     set({ isLoading: true });
     try {
-      // Simulate API call - replace with actual API
-      const response = await fetch('https://api.simpleasthat.com/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const response = await authService.login({ email, password });
+      
+      await SecureStore.setItemAsync('auth_token', response.token);
+      await SecureStore.setItemAsync('refresh_token', response.refreshToken);
+      apiClient.setToken(response.token);
+      
+      await AsyncStorage.setItem('user_data', JSON.stringify(response.user));
+      
+      set({
+        user: response.user,
+        token: response.token,
+        refreshToken: response.refreshToken,
+        isAuthenticated: true,
+        isLoading: false,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        await SecureStore.setItemAsync('auth_token', data.token);
-        await AsyncStorage.setItem('user_data', JSON.stringify(data.user));
-        
-        set({
-          user: data.user,
-          token: data.token,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-        return true;
-      }
-      set({ isLoading: false });
-      return false;
+      return true;
     } catch (error) {
-      console.error('Login error:', error);
+      const appError = handleApiError(error);
+      console.error('Login error:', appError.message);
       set({ isLoading: false });
       return false;
     }
@@ -103,13 +105,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (result.success) {
         const storedToken = await SecureStore.getItemAsync('auth_token');
+        const storedRefreshToken = await SecureStore.getItemAsync('refresh_token');
         const storedUser = await AsyncStorage.getItem('user_data');
         
         if (storedToken && storedUser) {
+          apiClient.setToken(storedToken);
           const user = JSON.parse(storedUser);
           set({
             user,
             token: storedToken,
+            refreshToken: storedRefreshToken,
             isAuthenticated: true,
           });
           return true;
@@ -123,11 +128,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Ignore logout errors
+    }
+    
     await SecureStore.deleteItemAsync('auth_token');
+    await SecureStore.deleteItemAsync('refresh_token');
     await AsyncStorage.removeItem('user_data');
+    apiClient.clearToken();
+    
     set({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
       biometricsEnabled: false,
     });
@@ -172,25 +187,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  refreshToken: async () => {
-    const currentToken = get().token;
-    if (currentToken) {
-      try {
-        const response = await fetch('https://api.simpleasthat.com/auth/refresh', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${currentToken}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          await SecureStore.setItemAsync('auth_token', data.token);
-          set({ token: data.token, lastSyncTime: new Date() });
-        }
-      } catch (error) {
-        console.error('Token refresh error:', error);
-      }
+  refreshAuthToken: async () => {
+    const currentRefresh = get().refreshToken;
+    if (!currentRefresh) return;
+    
+    try {
+      const response = await authService.refreshToken(currentRefresh);
+      await SecureStore.setItemAsync('auth_token', response.token);
+      apiClient.setToken(response.token);
+      set({ token: response.token, lastSyncTime: new Date() });
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      // If refresh fails, logout user
+      get().logout();
     }
   },
 }));

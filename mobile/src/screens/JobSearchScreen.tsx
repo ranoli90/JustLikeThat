@@ -5,13 +5,12 @@ import {
   TextInput,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   FlatList,
-  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { EmptyState } from '../components/EmptyState';
 
 interface JobPosting {
   id: string;
@@ -40,10 +39,20 @@ const JobSearchScreen: React.FC = () => {
 
   const filters = ['Remote', 'Full-time', 'Part-time', 'Contract', 'Entry Level', 'Senior', 'Engineering', 'Product', 'Design'];
 
+  const toggleFilter = (filter: string) => {
+    if (selectedFilters.includes(filter)) {
+      setSelectedFilters(selectedFilters.filter((f) => f !== filter));
+    } else {
+      setSelectedFilters([...selectedFilters, filter]);
+    }
+  };
+
   const renderJobItem = ({ item }: { item: JobPosting }) => (
     <TouchableOpacity
       style={styles.jobCard}
       onPress={() => navigation.navigate('JobDetail' as never, { id: item.id })}
+      accessibilityLabel={`${item.title} at ${item.company}`}
+      accessibilityHint={`${item.matchScore}% match, ${item.location}`}
     >
       <View style={styles.jobHeader}>
         <View style={styles.jobIcon}>
@@ -100,39 +109,41 @@ const JobSearchScreen: React.FC = () => {
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#9CA3AF"
+            accessibilityLabel="Search jobs"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <TouchableOpacity 
+              onPress={() => setSearchQuery('')}
+              accessibilityLabel="Clear search"
+            >
               <Ionicons name="close-circle" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.filterButton}>
+        <TouchableOpacity 
+          style={styles.filterButton}
+          accessibilityLabel="Filter jobs"
+        >
           <Ionicons name="options-outline" size={24} color="#4F46E5" />
         </TouchableOpacity>
       </View>
 
       {/* Filter Chips */}
-      <ScrollView
+      <FlatList
         horizontal
+        data={filters}
         showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
         contentContainerStyle={styles.filterContent}
-      >
-        {filters.map((filter) => (
+        keyExtractor={(filter) => filter}
+        renderItem={({ item: filter }) => (
           <TouchableOpacity
-            key={filter}
             style={[
               styles.filterChip,
               selectedFilters.includes(filter) && styles.filterChipActive,
             ]}
-            onPress={() => {
-              if (selectedFilters.includes(filter)) {
-                setSelectedFilters(selectedFilters.filter((f) => f !== filter));
-              } else {
-                setSelectedFilters([...selectedFilters, filter]);
-              }
-            }}
+            onPress={() => toggleFilter(filter)}
+            accessibilityLabel={`${filter} filter`}
+            accessibilityState={{ selected: selectedFilters.includes(filter) }}
           >
             <Text
               style={[
@@ -143,13 +154,16 @@ const JobSearchScreen: React.FC = () => {
               {filter}
             </Text>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
 
       {/* Results Count */}
       <View style={styles.resultsHeader}>
         <Text style={styles.resultsCount}>{jobs.length} jobs found</Text>
-        <TouchableOpacity style={styles.sortButton}>
+        <TouchableOpacity 
+          style={styles.sortButton}
+          accessibilityLabel="Sort jobs by best match"
+        >
           <Text style={styles.sortText}>Sort by: Best Match</Text>
           <Ionicons name="chevron-down" size={16} color="#4F46E5" />
         </TouchableOpacity>
@@ -162,6 +176,13 @@ const JobSearchScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.jobList}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <EmptyState
+            icon="search-outline"
+            title="No jobs found"
+            message="Try adjusting your search or filters"
+          />
+        }
       />
     </SafeAreaView>
   );
@@ -202,10 +223,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  filterContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
   },
   filterContent: {
     paddingHorizontal: 16,

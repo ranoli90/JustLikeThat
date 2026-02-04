@@ -4,12 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBadge } from '../components/StatusBadge';
+import { EmptyState } from '../components/EmptyState';
 
 interface Application {
   id: string;
@@ -46,20 +47,7 @@ const ApplicationsScreen: React.FC = () => {
     return app.status === selectedTab;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'interview': return '#10B981';
-      case 'offer': return '#059669';
-      case 'screening': return '#F59E0B';
-      case 'submitted': return '#3B82F6';
-      case 'draft': return '#6B7280';
-      case 'rejected': return '#EF4444';
-      case 'withdrawn': return '#9CA3AF';
-      default: return '#6B7280';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string): keyof typeof Ionicons.glyphMap => {
     switch (status) {
       case 'interview': return 'people-outline';
       case 'offer': return 'trophy-outline';
@@ -72,10 +60,24 @@ const ApplicationsScreen: React.FC = () => {
     }
   };
 
+  const getStatusColorValue = (status: string): string => {
+    switch (status) {
+      case 'interview': return '#10B981';
+      case 'offer': return '#059669';
+      case 'screening': return '#F59E0B';
+      case 'submitted': return '#3B82F6';
+      case 'draft': return '#6B7280';
+      case 'rejected': return '#EF4444';
+      case 'withdrawn': return '#9CA3AF';
+      default: return '#6B7280';
+    }
+  };
+
   const renderApplicationItem = ({ item }: { item: Application }) => (
     <TouchableOpacity
       style={styles.applicationCard}
       onPress={() => navigation.navigate('ApplicationDetail' as never, { id: item.id })}
+      accessibilityLabel={`Application at ${item.company} for ${item.position}`}
     >
       <View style={styles.applicationHeader}>
         <View style={styles.companyIcon}>
@@ -89,45 +91,58 @@ const ApplicationsScreen: React.FC = () => {
       </View>
 
       <View style={styles.applicationFooter}>
-        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
-          <Ionicons name={getStatusIcon(item.status) as any} size={14} color={getStatusColor(item.status)} />
-          <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-            {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-          </Text>
+        <View style={styles.statusContainer}>
+          <Ionicons 
+            name={getStatusIcon(item.status)} 
+            size={14} 
+            color={getStatusColorValue(item.status)} 
+          />
+          <StatusBadge status={item.status} />
         </View>
         {item.appliedDate && (
           <Text style={styles.appliedDate}>Applied {item.appliedDate}</Text>
         )}
       </View>
 
-      <TouchableOpacity style={styles.quickAction}>
+      <TouchableOpacity 
+        style={styles.quickAction}
+        accessibilityLabel="More options"
+      >
         <Ionicons name="ellipsis-vertical" size={20} color="#6B7280" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
+
+  const navigateToSearch = () => {
+    navigation.navigate('Search' as never);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Applications</Text>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          accessibilityLabel="Add new application"
+        >
           <Ionicons name="add" size={24} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       {/* Tabs */}
-      <ScrollView
+      <FlatList
         horizontal
+        data={tabs}
         showsHorizontalScrollIndicator={false}
-        style={styles.tabsContainer}
         contentContainerStyle={styles.tabsContent}
-      >
-        {tabs.map((tab) => (
+        keyExtractor={(tab) => tab.key}
+        renderItem={({ item: tab }) => (
           <TouchableOpacity
-            key={tab.key}
             style={[styles.tab, selectedTab === tab.key && styles.tabActive]}
             onPress={() => setSelectedTab(tab.key)}
+            accessibilityLabel={`${tab.label} tab`}
+            accessibilityState={{ selected: selectedTab === tab.key }}
           >
             <Text style={[styles.tabText, selectedTab === tab.key && styles.tabTextActive]}>
               {tab.label}
@@ -138,8 +153,8 @@ const ApplicationsScreen: React.FC = () => {
               </Text>
             </View>
           </TouchableOpacity>
-        ))}
-      </ScrollView>
+        )}
+      />
 
       {/* Stats */}
       <View style={styles.statsRow}>
@@ -169,14 +184,13 @@ const ApplicationsScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="briefcase-outline" size={48} color="#9CA3AF" />
-            <Text style={styles.emptyTitle}>No applications</Text>
-            <Text style={styles.emptyText}>Start your job search to see applications here</Text>
-            <TouchableOpacity style={styles.emptyButton}>
-              <Text style={styles.emptyButtonText}>Search Jobs</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="briefcase-outline"
+            title="No applications"
+            message="Start your job search to see applications here"
+            actionLabel="Search Jobs"
+            onAction={navigateToSearch}
+          />
         }
       />
     </SafeAreaView>
@@ -208,11 +222,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  tabsContainer: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   tabsContent: {
     paddingHorizontal: 16,
@@ -334,18 +343,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  statusBadge: {
+  statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    gap: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '500',
-    textTransform: 'capitalize',
+    gap: 8,
   },
   appliedDate: {
     fontSize: 12,
@@ -355,34 +356,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginTop: 16,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  emptyButton: {
-    backgroundColor: '#4F46E5',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    marginTop: 16,
-  },
-  emptyButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
   },
 });
 

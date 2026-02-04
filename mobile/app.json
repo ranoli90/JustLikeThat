@@ -69,7 +69,11 @@
     "extra": {
       "eas": {
         "projectId": "YOUR_PROJECT_ID"
-      }
+      },
+      "apiBaseUrl": "https://api.simpleasthat.com",
+      "apiVersion": "v1",
+      "enableAnalytics": false,
+      "enableOfflineMode": true
     },
     "runtimeVersion": {
       "policy": "appVersion"
