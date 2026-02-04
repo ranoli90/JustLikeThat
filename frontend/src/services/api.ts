@@ -239,4 +239,419 @@ export const securityAPI = {
   },
 };
 
+// Feedback API
+export const feedbackAPI = {
+  submitFeedback: async (data: {
+    type: string;
+    trigger: string;
+    rating?: number;
+    comment?: string;
+    metadata?: any;
+  }): Promise<any> => {
+    const response = await api.post('/api/feedback', data);
+    return response.data;
+  },
+
+  getUserFeedback: async (): Promise<any[]> => {
+    const response = await api.get('/api/feedback');
+    return response.data;
+  },
+
+  getFeedbackAnalytics: async (): Promise<any> => {
+    const response = await api.get('/api/feedback/analytics');
+    return response.data;
+  },
+
+  getUserSegments: async (): Promise<any> => {
+    const response = await api.get('/api/feedback/segments');
+    return response.data;
+  },
+
+  getFeedbackByTrigger: async (trigger: string): Promise<any[]> => {
+    const response = await api.get(`/api/feedback/trigger/${trigger}`);
+    return response.data;
+  },
+};
+
+// Interview API
+export const interviewAPI = {
+  // Sessions
+  createSession: async (data: {
+    userId: string;
+    applicationId?: string;
+    interviewType: string;
+    interviewFormat: string;
+    companyName?: string;
+    jobTitle?: string;
+  }): Promise<any> => {
+    const response = await api.post('/interview/sessions', data);
+    return response.data;
+  },
+
+  getUserSessions: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/interview/sessions', { params: { userId } });
+    return response.data;
+  },
+
+  getSession: async (sessionId: string): Promise<any> => {
+    const response = await api.get(`/interview/sessions/${sessionId}`);
+    return response.data;
+  },
+
+  startPractice: async (sessionId: string, data: { questionType: string; count?: number }): Promise<any> => {
+    const response = await api.post(`/interview/sessions/${sessionId}/practice`, data);
+    return response.data;
+  },
+
+  submitAnswer: async (sessionId: string, questionId: string, answer: string): Promise<any> => {
+    const response = await api.post(`/interview/sessions/${sessionId}/answer`, { questionId, answer });
+    return response.data;
+  },
+
+  completeSession: async (sessionId: string): Promise<any> => {
+    const response = await api.post(`/interview/sessions/${sessionId}/complete`);
+    return response.data;
+  },
+
+  scheduleSession: async (sessionId: string, interviewDate: string, timezone: string): Promise<any> => {
+    const response = await api.post(`/interview/sessions/${sessionId}/schedule`, { interviewDate, timezone });
+    return response.data;
+  },
+
+  getPreparationTips: async (sessionId: string): Promise<any> => {
+    const response = await api.get(`/interview/sessions/${sessionId}/tips`);
+    return response.data;
+  },
+
+  deleteSession: async (sessionId: string): Promise<void> => {
+    await api.delete(`/interview/sessions/${sessionId}`);
+  },
+
+  // Company Research
+  researchCompany: async (sessionId: string, companyName: string): Promise<any> => {
+    const response = await api.post(`/interview/sessions/${sessionId}/company`, { companyName });
+    return response.data;
+  },
+
+  getCompanyInsight: async (sessionId: string): Promise<any> => {
+    const response = await api.get(`/interview/sessions/${sessionId}/company`);
+    return response.data;
+  },
+
+  // Questions
+  generateQuestions: async (type: string, jobTitle?: string, count?: number): Promise<any[]> => {
+    const response = await api.get('/interview/questions/generate', { params: { type, jobTitle, count } });
+    return response.data;
+  },
+
+  getBehavioralQuestions: async (count?: number): Promise<any[]> => {
+    const response = await api.get('/interview/questions/behavioral', { params: { count } });
+    return response.data;
+  },
+
+  getTechnicalQuestions: async (jobTitle?: string, count?: number): Promise<any[]> => {
+    const response = await api.get('/interview/questions/technical', { params: { jobTitle, count } });
+    return response.data;
+  },
+
+  getAnswerStructure: async (type: string): Promise<any> => {
+    const response = await api.get(`/interview/questions/structure/${type}`);
+    return response.data;
+  },
+
+  // Scheduling
+  getSchedule: async (sessionId: string): Promise<any> => {
+    const response = await api.get(`/interview/sessions/${sessionId}/schedule`);
+    return response.data;
+  },
+
+  getPreparationTipsByFormat: async (sessionId: string): Promise<any> => {
+    const response = await api.get(`/interview/sessions/${sessionId}/preparation-tips`);
+    return response.data;
+  },
+
+  getDressCodeGuidance: async (companyType: string): Promise<any> => {
+    const response = await api.get(`/interview/dress-code/${companyType}`);
+    return response.data;
+  },
+
+  // Salary Negotiation
+  createNegotiation: async (data: {
+    userId: string;
+    company: string;
+    position: string;
+    targetSalary?: number;
+    minimumAcceptable?: number;
+  }): Promise<any> => {
+    const response = await api.post('/interview/negotiation', data);
+    return response.data;
+  },
+
+  getNegotiation: async (negotiationId: string): Promise<any> => {
+    const response = await api.get(`/interview/negotiation/${negotiationId}`);
+    return response.data;
+  },
+
+  getUserNegotiations: async (userId: string): Promise<any[]> => {
+    const response = await api.get(`/interview/negotiation/user/${userId}`);
+    return response.data;
+  },
+
+  getMarketSalaryRange: async (position: string, location?: string, experience?: string): Promise<any> => {
+    const response = await api.get('/interview/salary-range', { params: { position, location, experience } });
+    return response.data;
+  },
+
+  getNegotiationStrategy: async (negotiationId: string): Promise<any> => {
+    const response = await api.get(`/interview/negotiation/${negotiationId}/strategy`);
+    return response.data;
+  },
+
+  // Post Interview
+  createFollowUp: async (data: {
+    userId: string;
+    applicationId: string;
+    interviewDate: string;
+    followUpType: string;
+    message?: string;
+  }): Promise<any> => {
+    const response = await api.post('/interview/follow-up', data);
+    return response.data;
+  },
+
+  getUserFollowUps: async (userId: string): Promise<any[]> => {
+    const response = await api.get(`/interview/follow-up/user/${userId}`);
+    return response.data;
+  },
+
+  getPendingFollowUps: async (userId: string): Promise<any[]> => {
+    const response = await api.get(`/interview/follow-up/pending/${userId}`);
+    return response.data;
+  },
+
+  updateFollowUpStatus: async (id: string, status: string, message?: string): Promise<any> => {
+    const response = await api.put(`/interview/follow-up/${id}/status`, { status, message });
+    return response.data;
+  },
+
+  generateThankYouNote: async (params: {
+    interviewerName?: string;
+    companyName: string;
+    position: string;
+    keyTopics: string[];
+    interviewDate: string;
+  }): Promise<any> => {
+    const response = await api.post('/interview/thank-you-template', params);
+    return response.data;
+  },
+
+  generateFollowUpNote: async (params: {
+    companyName: string;
+    position: string;
+    lastContactDate: string;
+    status: string;
+  }): Promise<any> => {
+    const response = await api.post('/interview/follow-up-template', params);
+    return response.data;
+  },
+
+  getPostInterviewGuidance: async (): Promise<any> => {
+    const response = await api.get('/interview/guidance');
+    return response.data;
+  },
+};
+
+// Career API
+export const careerAPI = {
+  // Career Paths
+  getCareerPaths: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/career/paths', { params: { userId } });
+    return response.data;
+  },
+
+  getCareerPath: async (pathId: string): Promise<any> => {
+    const response = await api.get(`/career/paths/${pathId}`);
+    return response.data;
+  },
+
+  createCareerPath: async (userId: string, data: any): Promise<any> => {
+    const response = await api.post('/career/paths', { userId, data });
+    return response.data;
+  },
+
+  updateCareerPath: async (pathId: string, data: any): Promise<any> => {
+    const response = await api.put(`/career/paths/${pathId}`, data);
+    return response.data;
+  },
+
+  getCareerRecommendations: async (userId: string, currentRole: string, targetRole: string, industry: string): Promise<any[]> => {
+    const response = await api.post('/career/recommendations', { userId, currentRole, targetRole, industry });
+    return response.data;
+  },
+
+  // Skill Gap Analysis
+  analyzeSkillGaps: async (userId: string, targetRole: string, industry: string): Promise<any> => {
+    const response = await api.post('/career/skill-gap-analysis', { userId, targetRole, industry });
+    return response.data;
+  },
+
+  getSkillGaps: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/career/skill-gaps', { params: { userId } });
+    return response.data;
+  },
+
+  // Learning Resources
+  getLearningResources: async (userId: string, status?: string): Promise<any[]> => {
+    const response = await api.get('/career/learning-resources', { params: { userId, status } });
+    return response.data;
+  },
+
+  addLearningResource: async (userId: string, data: any): Promise<any> => {
+    const response = await api.post('/career/learning-resources', { userId, data });
+    return response.data;
+  },
+
+  updateLearningResource: async (resourceId: string, data: any): Promise<any> => {
+    const response = await api.put(`/career/learning-resources/${resourceId}`, data);
+    return response.data;
+  },
+
+  getLearningRecommendations: async (userId: string): Promise<any[]> => {
+    const response = await api.get(`/career/learning-resources/recommendations/${userId}`);
+    return response.data;
+  },
+
+  // Certifications
+  getCertifications: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/career/certifications', { params: { userId } });
+    return response.data;
+  },
+
+  addCertification: async (userId: string, data: any): Promise<any> => {
+    const response = await api.post('/career/certifications', { userId, data });
+    return response.data;
+  },
+
+  getCertificationTemplates: async (category?: string): Promise<any[]> => {
+    const response = await api.get('/career/certifications/templates', { params: { category } });
+    return response.data;
+  },
+
+  getCertificationRecommendations: async (userId: string, targetRole: string): Promise<any[]> => {
+    const response = await api.post('/career/certifications/recommendations', { userId, targetRole });
+    return response.data;
+  },
+
+  // Milestones
+  getMilestones: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/career/milestones', { params: { userId } });
+    return response.data;
+  },
+
+  createMilestone: async (userId: string, data: any): Promise<any> => {
+    const response = await api.post('/career/milestones', { userId, data });
+    return response.data;
+  },
+
+  updateMilestone: async (milestoneId: string, data: any): Promise<any> => {
+    const response = await api.put(`/career/milestones/${milestoneId}`, data);
+    return response.data;
+  },
+
+  getMilestoneTemplates: async (industry?: string): Promise<any[]> => {
+    const response = await api.get('/career/milestones/templates', { params: { industry } });
+    return response.data;
+  },
+
+  // Goals
+  getGoals: async (userId: string, timeframe?: string): Promise<any[]> => {
+    const response = await api.get('/career/goals', { params: { userId, timeframe } });
+    return response.data;
+  },
+
+  createGoal: async (userId: string, data: any): Promise<any> => {
+    const response = await api.post('/career/goals', { userId, data });
+    return response.data;
+  },
+
+  updateGoal: async (goalId: string, data: any): Promise<any> => {
+    const response = await api.put(`/career/goals/${goalId}`, data);
+    return response.data;
+  },
+
+  updateGoalProgress: async (goalId: string, progress: number): Promise<any> => {
+    const response = await api.put(`/career/goals/${goalId}/progress`, { progress });
+    return response.data;
+  },
+
+  // Mentorship
+  getMentorships: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/career/mentorships', { params: { userId } });
+    return response.data;
+  },
+
+  createMentorship: async (userId: string, data: any): Promise<any> => {
+    const response = await api.post('/career/mentorships', { userId, data });
+    return response.data;
+  },
+
+  getMentorshipRelationship: async (relationshipId: string): Promise<any> => {
+    const response = await api.get(`/career/mentorships/${relationshipId}`);
+    return response.data;
+  },
+
+  addMentorMeeting: async (relationshipId: string, meeting: any): Promise<any> => {
+    const response = await api.post(`/career/mentorships/${relationshipId}/meetings`, meeting);
+    return response.data;
+  },
+
+  findMentors: async (userId: string, criteria: { expertise?: string; industries?: string; levels?: string }): Promise<any[]> => {
+    const response = await api.get('/career/mentors/search', { params: { userId, ...criteria } });
+    return response.data;
+  },
+
+  // Salary Projections
+  getSalaryProjections: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/career/salary/projections', { params: { userId } });
+    return response.data;
+  },
+
+  generateSalaryProjection: async (userId: string, role: string, industry: string, location: string): Promise<any> => {
+    const response = await api.post('/career/salary/projections', { userId, role, industry, location });
+    return response.data;
+  },
+
+  getSalaryHistory: async (userId: string): Promise<any[]> => {
+    const response = await api.get('/career/salary/history', { params: { userId } });
+    return response.data;
+  },
+
+  addSalaryHistory: async (userId: string, data: any): Promise<any> => {
+    const response = await api.post('/career/salary/history', { userId, data });
+    return response.data;
+  },
+
+  // Industry Trends
+  getIndustryTrends: async (type?: string): Promise<any[]> => {
+    const response = await api.get('/career/trends', { params: { type } });
+    return response.data;
+  },
+
+  getSkillPredictions: async (): Promise<any[]> => {
+    const response = await api.get('/career/trends/predictions');
+    return response.data;
+  },
+
+  getRelevantTrends: async (userId: string): Promise<any> => {
+    const response = await api.get(`/career/trends/relevant/${userId}`);
+    return response.data;
+  },
+
+  // Dashboard
+  getCareerDashboard: async (userId: string): Promise<any> => {
+    const response = await api.get(`/career/dashboard/${userId}`);
+    return response.data;
+  },
+};
+
 export default api;

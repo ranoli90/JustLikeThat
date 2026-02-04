@@ -4,10 +4,14 @@ import { Repository } from 'typeorm';
 import { JobSource, JobSourceCategory, ComplianceLevel, SourceReliability, CostEffectiveness } from '../../entities/job-source.entity';
 import { IngestionLog, IngestionStatus } from '../../entities/ingestion-log.entity';
 import { JobPosting } from '../../entities/job-posting.entity';
+import { JobNormalizationService } from './job-normalization.service';
+import { RateLimitService, RateLimitInfo, CostInfo } from './rate-limit.service';
+import { AbstractJobSource, RawJobData, SearchParams } from './integrations';
 
 @Injectable()
 export class JobIngestionService {
   private readonly logger = new Logger(JobIngestionService.name);
+  private integrationRegistry: Map<string, AbstractJobSource> = new Map();
 
   constructor(
     @InjectRepository(JobSource)
@@ -16,7 +20,23 @@ export class JobIngestionService {
     private ingestionLogRepository: Repository<IngestionLog>,
     @InjectRepository(JobPosting)
     private jobPostingRepository: Repository<JobPosting>,
+    private normalizationService: JobNormalizationService,
+    private rateLimitService: RateLimitService,
   ) {}
+
+  // Integration registration methods
+  registerIntegration(sourceId: string, integration: AbstractJobSource): void {
+    this.integrationRegistry.set(sourceId, integration);
+    this.logger.log(`Registered integration: ${sourceId}`);
+  }
+
+  getIntegration(sourceId: string): AbstractJobSource | undefined {
+    return this.integrationRegistry.get(sourceId);
+  }
+
+  getAllIntegrations(): AbstractJobSource[] {
+    return Array.from(this.integrationRegistry.values());
+  }
 
   async getJobSources(userId: string, query: any) {
     const { page = 1, size = 10 } = query;
@@ -117,16 +137,83 @@ export class JobIngestionService {
     return ingestionLog;
   }
 
+  async ingestFromIntegration(userId: string, sourceId: string, searchParams: SearchParams) {
+    const integration = this.integrationRegistry.get(sourceId);
+    if (!integration) {
+      throw new Error(`Integration not found: ${sourceId}`);
+    }
+
+    // Check rate limit
+    const rateLimitInfo = this.rateLimitService.checkRateLimit(sourceId);
+    if (rateLimitInfo.remaining <= 0) {
+      await this.rateLimitService.waitForRateLimit(sourceId);
+    }
+
+    try {
+      // Authenticate if needed
+      if (integration.requiresAuth) {
+        await integration.authenticate();
+      }
+
+      // Search for jobs
+      const result = await integration.search(searchParams);
+      
+      // Record cost
+      this.rateLimitService.recordRequest(sourceId, result.jobs.length);
+
+      // Normalize jobs
+      const { normalized, stats } = this.normalizationService.normalizeBatch(result.jobs);
+
+      // Save to database
+      const ingested = await this.saveNormalizedJobs(normalized, sourceId);
+
+      return {
+        success: true,
+        jobsFound: result.jobs.length,
+        jobsIngested: ingested,
+        stats,
+        rateLimit: rateLimitInfo,
+      };
+    } catch (error) {
+      this.logger.error(`Ingestion failed for ${sourceId}`, error);
+      throw error;
+    }
+  }
+
   async getIngestionStatus(userId: string, jobId: string) {
     return this.ingestionLogRepository.findOneBy({ id: jobId });
   }
 
-  private async fetchJobsFromSource(jobSource: JobSource, keywords?: string, location?: string): Promise<any[]> {
+  async getRateLimitInfo(sourceId: string): Promise<RateLimitInfo> {
+    return this.rateLimitService.checkRateLimit(sourceId);
+  }
+
+  async getCostInfo(sourceId: string): Promise<CostInfo> {
+    return this.rateLimitService.getCostInfo(sourceId);
+  }
+
+  async getTotalCost() {
+    return this.rateLimitService.getTotalCost();
+  }
+
+  async getOptimizationRecommendations() {
+    return this.rateLimitService.getOptimizationRecommendations();
+  }
+
+  private async fetchJobsFromSource(jobSource: JobSource, keywords?: string, location?: string): Promise<RawJobData[]> {
     this.logger.log(`Fetching jobs from ${jobSource.name} (${jobSource.category})`);
+
+    const integration = this.integrationRegistry.get(jobSource.id);
+    if (integration) {
+      const result = await integration.search({ keywords, location });
+      return result.jobs;
+    }
 
     switch (jobSource.category) {
       case JobSourceCategory.API_INTEGRATION:
         return this.fetchFromAPI(jobSource, keywords, location);
+      case JobSourceCategory.SCRAPER:
+        return this.fetchFromScraper(jobSource, keywords, location);
       case JobSourceCategory.EMAIL_APP:
         return this.fetchFromEmail(jobSource, keywords, location);
       case JobSourceCategory.USER_AUTOFILL:
@@ -136,41 +223,49 @@ export class JobIngestionService {
     }
   }
 
-  private async fetchFromAPI(jobSource: JobSource, keywords?: string, location?: string): Promise<any[]> {
+  private async fetchFromAPI(jobSource: JobSource, keywords?: string, location?: string): Promise<RawJobData[]> {
     const { apiUrl, apiKey, endpoint } = jobSource.config;
     
     this.logger.log(`Calling API: ${apiUrl}/${endpoint}`);
     
-    const response = await fetch(`${apiUrl}/${endpoint}`, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
-      body: JSON.stringify({ keywords, location }),
-    });
+    try {
+      const response = await fetch(`${apiUrl}/${endpoint}`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        method: 'POST',
+        body: JSON.stringify({ keywords, location }),
+      });
 
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.jobs || [];
+    } catch (error) {
+      this.logger.error('API fetch error', error);
+      return [];
     }
-
-    const data = await response.json();
-    return data.jobs || [];
   }
 
-  private async fetchFromEmail(jobSource: JobSource, keywords?: string, location?: string): Promise<any[]> {
+  private async fetchFromScraper(jobSource: JobSource, keywords?: string, location?: string): Promise<RawJobData[]> {
+    this.logger.log(`Fetching jobs from scraper: ${jobSource.name}`);
+    return [];
+  }
+
+  private async fetchFromEmail(jobSource: JobSource, keywords?: string, location?: string): Promise<RawJobData[]> {
     this.logger.log(`Fetching jobs from email app: ${jobSource.name}`);
-    
     return [];
   }
 
-  private async fetchFromUserAutofill(jobSource: JobSource, keywords?: string, location?: string): Promise<any[]> {
+  private async fetchFromUserAutofill(jobSource: JobSource, keywords?: string, location?: string): Promise<RawJobData[]> {
     this.logger.log(`Fetching jobs from user autofill: ${jobSource.name}`);
-    
     return [];
   }
 
-  private async processJobs(jobs: any[]): Promise<{ ingested: number; duplicated: number; rejected: number }> {
+  private async processJobs(jobs: RawJobData[]): Promise<{ ingested: number; duplicated: number; rejected: number }> {
     let ingested = 0;
     let duplicated = 0;
     let rejected = 0;
@@ -193,16 +288,32 @@ export class JobIngestionService {
     return { ingested, duplicated, rejected };
   }
 
-  private async isDuplicate(jobData: any): Promise<boolean> {
-    const existingJob = await this.jobPostingRepository.findOneBy({
-      applyUrl: jobData.applyUrl,
-    });
+  private async saveNormalizedJobs(jobs: any[], sourceId: string): Promise<number> {
+    let ingested = 0;
+    
+    for (const normalizedJob of jobs) {
+      try {
+        const jobPosting = this.jobPostingRepository.create(normalizedJob as Partial<JobPosting>);
+        await this.jobPostingRepository.save(jobPosting);
+        ingested++;
+      } catch (error) {
+        this.logger.error('Failed to save normalized job', error);
+      }
+    }
+    
+    return ingested;
+  }
 
+  private async isDuplicate(jobData: RawJobData): Promise<boolean> {
+    const applyUrl = jobData.applyUrl || jobData.applicationUrl;
+    if (!applyUrl) return false;
+
+    const existingJob = await this.jobPostingRepository.findOneBy({ applyUrl });
     return !!existingJob;
   }
 
-  private isJobValid(jobData: any): boolean {
-    if (!jobData.title || !jobData.company || !jobData.applyUrl) {
+  private isJobValid(jobData: RawJobData): boolean {
+    if (!jobData.title || !jobData.company) {
       return false;
     }
 
@@ -213,7 +324,7 @@ export class JobIngestionService {
     return true;
   }
 
-  private async saveJob(jobData: any): Promise<JobPosting> {
+  private async saveJob(jobData: RawJobData): Promise<JobPosting> {
     const jobPosting = this.jobPostingRepository.create(jobData as any);
     return this.jobPostingRepository.save(jobPosting);
   }
@@ -221,7 +332,6 @@ export class JobIngestionService {
   async handleIngestionFailure(ingestionLog: IngestionLog): Promise<void> {
     if (ingestionLog.retryCount >= ingestionLog.jobSource.maxRetries) {
       this.logger.error(`Max retries reached for ingestion log: ${ingestionLog.id}`);
-      
       return;
     }
 
@@ -256,19 +366,21 @@ export class JobIngestionService {
   getRiskMatrix(): any {
     return {
       allowedPlatforms: {
-        API_INTEGRATION: ['LinkedIn', 'Indeed', 'Glassdoor', 'Monster', 'CareerBuilder'],
+        API_INTEGRATION: ['LinkedIn', 'Indeed', 'Glassdoor', 'Greenhouse', 'Lever', 'Workday'],
+        SCRAPER: ['Remote.co', 'We Work Remotely', 'TechCrunch'],
         EMAIL_APP: ['Gmail', 'Outlook', 'Yahoo Mail'],
         USER_AUTOFILL: ['Chrome', 'Firefox', 'Safari'],
       },
       forbiddenPlatforms: {
         API_INTEGRATION: ['Unknown API', 'Unverified Job Board'],
+        SCRAPER: ['Suspicious Scraper'],
         EMAIL_APP: ['Suspicious Email Service'],
         USER_AUTOFILL: ['Malicious Browser Extension'],
       },
       complianceLevels: {
-        HIGH: ['LinkedIn', 'Indeed'],
-        MEDIUM: ['Glassdoor', 'Monster', 'CareerBuilder'],
-        LOW: ['Other Job Boards'],
+        HIGH: ['LinkedIn', 'Indeed', 'Greenhouse', 'Lever', 'Workday'],
+        MEDIUM: ['Glassdoor', 'Remote.co', 'AngelList'],
+        LOW: ['Other Job Boards', 'Generic Scrapers'],
       },
     };
   }
@@ -288,13 +400,29 @@ export class JobIngestionService {
       { name: 'LinkedIn API', category: 'API_INTEGRATION', complianceLevel: 'HIGH', reliability: 'CRITICAL', costEffectiveness: 'HIGH' },
       { name: 'Indeed API', category: 'API_INTEGRATION', complianceLevel: 'HIGH', reliability: 'CRITICAL', costEffectiveness: 'HIGH' },
       { name: 'Glassdoor API', category: 'API_INTEGRATION', complianceLevel: 'MEDIUM', reliability: 'HIGH', costEffectiveness: 'MEDIUM' },
-      { name: 'Monster API', category: 'API_INTEGRATION', complianceLevel: 'MEDIUM', reliability: 'HIGH', costEffectiveness: 'MEDIUM' },
-      { name: 'CareerBuilder API', category: 'API_INTEGRATION', complianceLevel: 'MEDIUM', reliability: 'HIGH', costEffectiveness: 'MEDIUM' },
-      { name: 'Gmail Integration', category: 'EMAIL_APP', complianceLevel: 'LOW', reliability: 'MEDIUM', costEffectiveness: 'LOW' },
-      { name: 'Outlook Integration', category: 'EMAIL_APP', complianceLevel: 'LOW', reliability: 'MEDIUM', costEffectiveness: 'LOW' },
-      { name: 'Chrome Autofill', category: 'USER_AUTOFILL', complianceLevel: 'LOW', reliability: 'LOW', costEffectiveness: 'VERY_HIGH' },
-      { name: 'Firefox Autofill', category: 'USER_AUTOFILL', complianceLevel: 'LOW', reliability: 'LOW', costEffectiveness: 'VERY_HIGH' },
-      { name: 'Safari Autofill', category: 'USER_AUTOFILL', complianceLevel: 'LOW', reliability: 'LOW', costEffectiveness: 'VERY_HIGH' },
+      { name: 'Greenhouse', category: 'API_INTEGRATION', complianceLevel: 'HIGH', reliability: 'HIGH', costEffectiveness: 'HIGH' },
+      { name: 'Lever', category: 'API_INTEGRATION', complianceLevel: 'HIGH', reliability: 'HIGH', costEffectiveness: 'HIGH' },
+      { name: 'Remote.co', category: 'SCRAPER', complianceLevel: 'MEDIUM', reliability: 'MEDIUM', costEffectiveness: 'HIGH' },
+      { name: 'We Work Remotely', category: 'SCRAPER', complianceLevel: 'MEDIUM', reliability: 'MEDIUM', costEffectiveness: 'HIGH' },
+      { name: 'AngelList', category: 'API_INTEGRATION', complianceLevel: 'MEDIUM', reliability: 'HIGH', costEffectiveness: 'HIGH' },
+      { name: 'Dice', category: 'API_INTEGRATION', complianceLevel: 'MEDIUM', reliability: 'HIGH', costEffectiveness: 'MEDIUM' },
+      { name: 'Workday', category: 'API_INTEGRATION', complianceLevel: 'HIGH', reliability: 'HIGH', costEffectiveness: 'MEDIUM' },
+    ];
+  }
+
+  getAvailableIntegrations(): any[] {
+    return [
+      { id: 'linkedin', name: 'LinkedIn', category: 'API_INTEGRATION', free: false, requiresAuth: true },
+      { id: 'indeed', name: 'Indeed', category: 'API_INTEGRATION', free: false, requiresAuth: true },
+      { id: 'glassdoor', name: 'Glassdoor', category: 'API_INTEGRATION', free: false, requiresAuth: true },
+      { id: 'greenhouse', name: 'Greenhouse', category: 'API_INTEGRATION', free: true, requiresAuth: true },
+      { id: 'lever', name: 'Lever', category: 'API_INTEGRATION', free: true, requiresAuth: true },
+      { id: 'workday', name: 'Workday', category: 'API_INTEGRATION', free: false, requiresAuth: true },
+      { id: 'remote_co', name: 'Remote.co', category: 'SCRAPER', free: true, requiresAuth: false },
+      { id: 'we_work_remotely', name: 'We Work Remotely', category: 'SCRAPER', free: true, requiresAuth: false },
+      { id: 'angellist', name: 'AngelList (Wellfound)', category: 'API_INTEGRATION', free: true, requiresAuth: false },
+      { id: 'dice', name: 'Dice', category: 'API_INTEGRATION', free: false, requiresAuth: true },
+      { id: 'techcrunch', name: 'TechCrunch', category: 'SCRAPER', free: true, requiresAuth: false },
     ];
   }
 }

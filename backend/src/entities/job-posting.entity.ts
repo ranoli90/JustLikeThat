@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { JobSource } from './job-source.entity';
 
 export enum RemotePreference {
   REMOTE = 'REMOTE',
@@ -17,6 +18,12 @@ export enum JobType {
 export class JobPosting {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Column()
+  tenantId: string;
+
+  @Column({ nullable: true })
+  jobSourceId: string;
 
   @Column()
   title: string;
@@ -53,6 +60,9 @@ export class JobPosting {
 
   @Column({ default: false })
   isExpired: boolean;
+
+  @Column({ type: 'vector', nullable: true, array: true })
+  embedding: number[];
 
   @CreateDateColumn()
   createdAt: Date;

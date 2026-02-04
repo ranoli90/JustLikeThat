@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 
 export enum JobSourceCategory {
   API_INTEGRATION = 'API_INTEGRATION',
+  SCRAPER = 'SCRAPER',
   EMAIL_APP = 'EMAIL_APP',
   USER_AUTOFILL = 'USER_AUTOFILL',
 }

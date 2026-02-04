@@ -8,303 +8,6 @@ datasource db {
   extensions = [pgvector("0.5.0")]
 }
 
-// Multi-tenancy entity
-model Tenant {
-  id         String   @id @default(uuid())
-  name       String
-  slug       String   @unique
-  plan       Plan     @default(FREE)
-  status     TenantStatus @default(ACTIVE)
-  users      User[]   @relation("TenantUsers")
-  jobSources JobSource[] @relation("TenantJobSources")
-  applications Application[] @relation("TenantApplications")
-  configs    Config[] @relation("TenantConfigs")
-  auditLogs  AuditLog[] @relation("TenantAuditLogs")
-  notifications Notification[] @relation("TenantNotifications")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-enum Plan {
-  FREE
-  PRO
-  ENTERPRISE
-}
-
-enum TenantStatus {
-  ACTIVE
-  SUSPENDED
-  TRIAL
-}
-
-// User authentication and profile entity
-model User {
-  id                  String              @id @default(uuid())
-  tenantId            String
-  email               String              @unique
-  passwordHash        String
-  firstName           String
-  lastName            String
-  avatarUrl           String?
-  onboardingCompleted Boolean             @default(false)
-  tenant              Tenant              @relation("TenantUsers", fields: [tenantId], references: [id], onDelete: Cascade)
-  profile             CandidateProfile?   @relation("UserProfile")
-  preferences         UserPreferences?    @relation("UserPreferences")
-  applications        Application[]       @relation("UserApplications")
-  credentialVault     CredentialVaultEntry[] @relation("UserCredentials")
-  notifications       Notification[]      @relation("UserNotifications")
-  auditLogs           AuditLog[]          @relation("UserAuditLogs")
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-}
-
-// Candidate profile with parsed resume data
-model CandidateProfile {
-  id               String         @id @default(uuid())
-  tenantId         String
-  userId           String
-  headline         String?
-  summary          String?
-  experiences      Json
-  education        Json
-  skills           Json
-  certifications   Json?
-  projects         Json?
-  languages        Json?
-  completenessScore Float         @default(0)
-  user             User           @relation("UserProfile", fields: [userId], references: [id], onDelete: Cascade)
-  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  personas         Persona[]      @relation("ProfilePersonas")
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-}
-
-// Role-specific profile variations
-model Persona {
-  id               String         @id @default(uuid())
-  tenantId         String
-  profileId        String
-  name             String
-  jobTitle         String
-  experienceLevel  ExperienceLevel
-  skills           Json
-  summary          String?
-  embedding        Unsupported("vector(1536)")?
-  profile          CandidateProfile @relation("ProfilePersonas", fields: [profileId], references: [id], onDelete: Cascade)
-  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  applications     Application[]  @relation("PersonaApplications")
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-}
-
-enum ExperienceLevel {
-  JUNIOR
-  MID
-  SENIOR
-  LEAD
-}
-
-// Job board/ATS integration configuration
-model JobSource {
-  id            String         @id @default(uuid())
-  tenantId      String
-  name          String
-  type          JobSourceType
-  riskLevel     RiskLevel      @default(MEDIUM)
-  credentials   Json
-  isActive      Boolean        @default(true)
-  rateLimit     Int?
-  jobPostings   JobPosting[]   @relation("JobSourcePostings")
-  tenant        Tenant         @relation("TenantJobSources", fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
-enum JobSourceType {
-  API
-  SCRAPING
-  ATS
-}
-
-enum RiskLevel {
-  LOW
-  MEDIUM
-  HIGH
-}
-
-// Parsed job posting data
-model JobPosting {
-  id               String         @id @default(uuid())
-  tenantId         String
-  jobSourceId      String
-  externalId       String?
-  title            String
-  company          String
-  location         String
-  remotePreference RemotePreference
-  jobType          JobType
-  salaryRange      Json?
-  description      String
-  requirements     Json
-  skills           Json
-  experiences      Json
-  applyUrl         String
-  embedding        Unsupported("vector(1536)")?
-  isExpired        Boolean        @default(false)
-  jobSource        JobSource      @relation("JobSourcePostings", fields: [jobSourceId], references: [id], onDelete: Cascade)
-  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  applications     Application[]  @relation("JobApplications")
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-}
-
-enum RemotePreference {
-  REMOTE
-  HYBRID
-  ONSITE
-}
-
-enum JobType {
-  FULL_TIME
-  PART_TIME
-  CONTRACT
-  INTERNSHIP
-}
-
-// Application tracking entity
-model Application {
-  id                String         @id @default(uuid())
-  tenantId          String
-  userId            String
-  jobPostingId      String
-  personaId         String?
-  status            ApplicationStatus @default(DRAFT)
-  submissionDate    DateTime?
-  tailoredResumeUrl String?
-  coverLetterUrl    String?
-  applicationData   Json?
-  antiSpamScore     Float          @default(0)
-  user              User           @relation("UserApplications", fields: [userId], references: [id], onDelete: Cascade)
-  jobPosting        JobPosting     @relation("JobApplications", fields: [jobPostingId], references: [id], onDelete: Cascade)
-  persona           Persona?       @relation("PersonaApplications", fields: [personaId], references: [id], onDelete: SetNull)
-  tenant            Tenant         @relation("TenantApplications", fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-}
-
-enum ApplicationStatus {
-  DRAFT
-  SUBMITTED
-  REJECTED
-  INTERVIEWING
-  OFFER
-}
-
-// Automation configuration for job applications
-model AutomationConfig {
-  id               String         @id @default(uuid())
-  tenantId         String
-  userId           String
-  name             String
-  minMatchScore    Float          @default(0.8)
-  autoApply        Boolean        @default(false)
-  timezone         String         @default("UTC")
-  schedule         Json?
-  antiSpamSettings Json
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-}
-
-// Secure credential storage
-model CredentialVaultEntry {
-  id            String         @id @default(uuid())
-  tenantId      String
-  userId        String
-  provider      String
-  encryptedData String
-  lastUsedAt    DateTime?
-  expiresAt     DateTime?
-  isActive      Boolean        @default(true)
-  user          User           @relation("UserCredentials", fields: [userId], references: [id], onDelete: Cascade)
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
-
-// System and tenant-specific configuration
-model Config {
-  id          String         @id @default(uuid())
-  tenantId    String?
-  key         String
-  value       String
-  description String?
-  isSecret    Boolean        @default(false)
-  tenant      Tenant?        @relation("TenantConfigs", fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-
-  @@unique([tenantId, key])
-}
-
-// Audit logging for compliance
-model AuditLog {
-  id            String         @id @default(uuid())
-  tenantId      String?
-  userId        String?
-  action        String
-  resourceType  String
-  resourceId    String?
-  details       Json?
-  ipAddress     String?
-  tenant        Tenant?        @relation("TenantAuditLogs", fields: [tenantId], references: [id], onDelete: Cascade)
-  user          User?          @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt     DateTime       @default(now())
-}
-
-// User notifications
-model Notification {
-  id          String         @id @default(uuid())
-  tenantId    String
-  userId      String
-  type        NotificationType
-  title       String
-  content     String
-  isRead      Boolean        @default(false)
-  priority    NotificationPriority @default(MEDIUM)
-  expiresAt   DateTime?
-  tenant      Tenant         @relation("TenantNotifications", fields: [tenantId], references: [id], onDelete: Cascade)
-  user        User           @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime       @default(now())
-}
-
-enum NotificationType {
-  EMAIL
-  PUSH
-  IN_APP
-}
-
-enum NotificationPriority {
-  LOW
-  MEDIUM
-  HIGH
-}
-
-// User preferences
-model UserPreferences {
-  id              String         @id @default(uuid())
-  tenantId        String
-  userId          String
-  jobPreferences  Json
-  notificationPreferences Json
-  privacySettings Json
-  user            User           @relation("UserPreferences", fields: [userId], references: [id], onDelete: Cascade)
-  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-}
-
 // Resume storage
 model Resume {
   id          String         @id @default(uuid())
@@ -318,4 +21,196 @@ model Resume {
   tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+}
+
+// Interview preparation and coaching
+model InterviewSession {
+  id                String             @id @default(uuid())
+  tenantId          String
+  userId            String
+  applicationId     String?
+  interviewType     InterviewType
+  interviewFormat   InterviewFormat
+  scheduledAt       DateTime?
+  duration          Int                @default(60) // minutes
+  status            InterviewStatus    @default(DRAFT)
+  notes             String?
+  feedback          Json?
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  company           CompanyInsight?
+  questions         InterviewQuestion[]
+  practices         InterviewPractice[]
+  schedules         InterviewSchedule?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+enum InterviewType {
+  PHONE_SCREEN
+  BEHAVIORAL
+  TECHNICAL
+  CASE_STUDY
+  PANEL
+  FINAL
+  ONSITE
+  VIDEO
+  ASSESSMENT
+}
+
+enum InterviewFormat {
+  VIRTUAL
+  ONSITE
+  PHONE
+  ASYNC_VIDEO
+}
+
+enum InterviewStatus {
+  DRAFT
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Interview questions and answers
+model InterviewQuestion {
+  id                String           @id @default(uuid())
+  sessionId         String
+  questionType      QuestionType
+  question          String
+  suggestedAnswer   String?
+  userAnswer        String?
+  difficulty        Difficulty       @default(MEDIUM)
+  tags              Json?
+  feedback          Json?
+  isAnswered        Boolean          @default(false)
+  session           InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+enum QuestionType {
+  BEHAVIORAL
+  TECHNICAL
+  SITUATIONAL
+  COMPANY_CULTURE
+  ROLE_SPECIFIC
+  CAREER_GOALS
+  SALARY
+  GENERAL
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+// Company research and insights
+model CompanyInsight {
+  id                String           @id @default(uuid())
+  tenantId          String
+  name              String
+  industry          String?
+  size              String?
+  location          String?
+  website           String?
+  culture           String?
+  values            Json?
+  benefits          Json?
+  interviewProcess  String?
+  tips              Json?
+  salaryRange       Json?
+  recentNews        Json?
+  glassdoorRating   Float?
+  notes             String?
+  session           InterviewSession @relation(fields: [id], references: [id], onDelete: Cascade)
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+// Interview practice sessions
+model InterviewPractice {
+  id                String           @id @default(uuid())
+  sessionId         String
+  questionId        String?
+  question          String
+  userAnswer        String
+  aiFeedback        Json?
+  confidenceScore   Float?
+  timeTaken         Int?            // seconds
+  improvementAreas  Json?
+  strengths         Json?
+  session           InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+// Interview scheduling
+model InterviewSchedule {
+  id                String           @id @default(uuid())
+  sessionId         String           @unique
+  interviewDate     DateTime
+  timezone          String           @default("UTC")
+  calendarEventUrl  String?
+  reminders         Json?
+  preparationChecklist Json?
+  dressCode         String?
+  location          String?
+  meetingLink       String?
+  attendees         Json?
+  session           InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+// Salary negotiation preparation
+model SalaryNegotiation {
+  id                String           @id @default(uuid())
+  tenantId          String
+  userId            String
+  company           String
+  position          String
+  marketRange       Json?
+  targetSalary      Int?
+  minimumAcceptable Int?
+  benefits          Json?
+  negotiationStrategy Json?
+  talkingPoints     Json?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+// Post-interview follow-up
+model PostInterviewAction {
+  id                String           @id @default(uuid())
+  tenantId          String
+  userId            String
+  applicationId     String
+  interviewDate     DateTime
+  followUpType      FollowUpType
+  status            ActionStatus     @default(PENDING)
+  dueDate           DateTime?
+  message           String?
+  sentAt            DateTime?
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+enum FollowUpType {
+  THANK_YOU
+  SECONDARY_FOLLOW_UP
+  DECISION_REQUEST
+  OFFER_NEGOTIATION
+  WITHDRAWAL
+}
+
+enum ActionStatus {
+  PENDING
+  SENT
+  COMPLETED
+  SKIPPED
 }

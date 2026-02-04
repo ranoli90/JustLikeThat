@@ -15,6 +15,8 @@ import { MatchingModule } from './modules/matching/matching.module';
 import { TailoringModule } from './modules/tailoring/tailoring.module';
 import { OrchestratorModule } from './modules/orchestrator/orchestrator.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
+import { CareerModule } from './modules/career/career.module';
 import { User } from './entities/user.entity';
 import { CandidateProfile } from './entities/candidate-profile.entity';
 import { UserPreferences } from './entities/user-preferences.entity';
@@ -24,11 +26,33 @@ import { JobPosting } from './entities/job-posting.entity';
 import { Application } from './entities/application.entity';
 import { JobSource } from './entities/job-source.entity';
 import { IngestionLog } from './entities/ingestion-log.entity';
+import { Feedback } from './entities/feedback.entity';
 import { OrchestratorTask } from './modules/orchestrator/entities/orchestrator-task.entity';
 import { Metric } from './modules/monitoring/entities/metric.entity';
 import { Alert } from './modules/monitoring/entities/alert.entity';
 import { CostControl } from './modules/monitoring/entities/cost-control.entity';
 import { LogEntry } from './modules/monitoring/entities/log-entry.entity';
+import { CareerPath } from './entities/career-path.entity';
+import { SkillGap } from './entities/skill-gap.entity';
+import { CareerMilestone, MilestoneTemplate } from './entities/career-milestone.entity';
+import { CareerGoal } from './entities/career-goal.entity';
+import { Certification, CertificationTemplate } from './entities/certification.entity';
+import { LearningResource, LearningResourceTemplate } from './entities/learning-resource.entity';
+import { MentorshipRelationship, MentorProfile } from './entities/mentorship.entity';
+import { SalaryProjection, SalaryHistory } from './entities/salary-projection.entity';
+import { IndustryTrend, SkillPrediction } from './entities/industry-trend.entity';
+import { OutreachCampaign } from './entities/outreach-campaign.entity';
+import { OutreachContact } from './entities/outreach-contact.entity';
+import { OutreachSequence } from './entities/outreach-sequence.entity';
+import { OutreachTemplate } from './entities/outreach-template.entity';
+import { OutreachMessage } from './entities/outreach-message.entity';
+import { RecruiterRelationship } from './entities/recruiter-relationship.entity';
+import { CompanyInsider } from './entities/company-insider.entity';
+import { WarmIntroRequest } from './entities/warm-intro.entity';
+import { NetworkingOpportunity } from './entities/networking-opportunity.entity';
+import { OutreachModule } from './modules/outreach/outreach.module';
+import { PerformanceModule } from './modules/performance/performance.module';
+import { SecurityModule } from './modules/security/security.module';
 
 @Module({
   imports: [
@@ -54,11 +78,36 @@ import { LogEntry } from './modules/monitoring/entities/log-entry.entity';
           Application,
           JobSource,
           IngestionLog,
+          Feedback,
           OrchestratorTask,
           Metric,
           Alert,
           CostControl,
           LogEntry,
+          CareerPath,
+          SkillGap,
+          CareerMilestone,
+          MilestoneTemplate,
+          CareerGoal,
+          Certification,
+          CertificationTemplate,
+          LearningResource,
+          LearningResourceTemplate,
+          MentorshipRelationship,
+          MentorProfile,
+          SalaryProjection,
+          SalaryHistory,
+          IndustryTrend,
+          SkillPrediction,
+          OutreachCampaign,
+          OutreachContact,
+          OutreachSequence,
+          OutreachTemplate,
+          OutreachMessage,
+          RecruiterRelationship,
+          CompanyInsider,
+          WarmIntroRequest,
+          NetworkingOpportunity,
         ],
         synchronize: true, // Set to false in production
         logging: true,
@@ -77,6 +126,11 @@ import { LogEntry } from './modules/monitoring/entities/log-entry.entity';
     TailoringModule,
     OrchestratorModule,
     MonitoringModule,
+    FeedbackModule,
+    CareerModule,
+    OutreachModule,
+    PerformanceModule,
+    SecurityModule,
   ],
   controllers: [AppController],
   providers: [AppService],

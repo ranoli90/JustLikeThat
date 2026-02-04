@@ -31,6 +31,9 @@ export class Persona {
   @Column({ type: 'text', nullable: true })
   summary: string;
 
+  @Column({ type: 'vector', nullable: true, array: true })
+  embedding: number[];
+
   @CreateDateColumn()
   createdAt: Date;
 

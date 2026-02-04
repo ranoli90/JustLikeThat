@@ -2,6 +2,9 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { CandidateProfile } from './candidate-profile.entity';
 import { Resume } from './resume.entity';
 import { UserPreferences } from './user-preferences.entity';
+import { Feedback } from './feedback.entity';
+import { ABTestAssignment } from './ab-test.entity';
+import { Survey } from './survey.entity';
 
 @Entity('users')
 export class User {
@@ -40,4 +43,13 @@ export class User {
 
   @OneToMany(() => Resume, (resume) => resume.user)
   resumes: Resume[];
+
+  @OneToMany(() => Feedback, (feedback) => feedback.user)
+  feedbacks: Feedback[];
+
+  @OneToMany(() => ABTestAssignment, (assignment) => assignment.user)
+  abTestAssignments: ABTestAssignment[];
+
+  @OneToMany(() => Survey, (survey) => survey.user)
+  surveys: Survey[];
 }
