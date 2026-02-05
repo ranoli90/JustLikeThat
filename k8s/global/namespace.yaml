@@ -1,0 +1,59 @@
+# Global Infrastructure Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: global-infrastructure
+  labels:
+    app.kubernetes.io/name: global-infrastructure
+    app.kubernetes.io/managed-by: kubectl
+---
+# Region Router ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: region-router-config
+  namespace: global-infrastructure
+data:
+  ROUTING_MODE: "latency-based"
+  PRIMARY_REGION: "us-east-1"
+  FAILOVER_ENABLED: "true"
+  FAILOVER_THRESHOLD_MS: "200"
+  REGION_MAP: |
+    us-east-1:
+      weight: 100
+      latencyTarget: 50
+    us-west-2:
+      weight: 50
+      latencyTarget: 80
+    eu-west-1:
+      weight: 30
+      latencyTarget: 100
+    ap-southeast-1:
+      weight: 20
+      latencyTarget: 150
+---
+# Global Health Monitor ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: health-monitor-config
+  namespace: global-infrastructure
+data:
+  CHECK_INTERVAL: "30s"
+  TIMEOUT: "5s"
+  UNHEALTHY_THRESHOLD: "3"
+  REGIONS: "us-east-1,us-west-2,eu-west-1,ap-southeast-1"
+  ENDPOINTS: "/health,/ready,/live"
+---
+# Failover Controller ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: failover-controller-config
+  namespace: global-infrastructure
+data:
+  RTO_MINUTES: "15"
+  RPO_MINUTES: "5"
+  AUTO_FAILOVER: "true"
+  NOTIFICATION_ENABLED: "true"
+  DRY_RUN_MODE: "false"

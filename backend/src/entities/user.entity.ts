@@ -29,6 +29,28 @@ export class User {
   @Column({ default: false })
   onboardingCompleted: boolean;
 
+  // Security fields
+  @Column({ default: true })
+  isActive: boolean;
+
+  @Column({ nullable: true })
+  resetPasswordToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetPasswordExpires: Date;
+
+  @Column({ default: false })
+  emailVerified: boolean;
+
+  @Column({ nullable: true })
+  emailVerificationToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerificationExpires: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  passwordUpdatedAt: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 

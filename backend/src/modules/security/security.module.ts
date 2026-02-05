@@ -11,6 +11,8 @@ import { ConsentService } from './services/consent.service';
 import { IncidentResponseService } from './services/incident-response.service';
 import { ApiSecurityService } from './services/api-security.service';
 import { VulnerabilityScannerService } from './services/vulnerability-scanner.service';
+import { GDPRService } from './services/gdpr.service';
+import { HIPAAService } from './services/hipaa.service';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Global()
@@ -29,6 +31,8 @@ import { PrismaModule } from '../prisma/prisma.module';
     IncidentResponseService,
     ApiSecurityService,
     VulnerabilityScannerService,
+    GDPRService,
+    HIPAAService,
   ],
   exports: [
     SecurityService,
@@ -42,6 +46,8 @@ import { PrismaModule } from '../prisma/prisma.module';
     IncidentResponseService,
     ApiSecurityService,
     VulnerabilityScannerService,
+    GDPRService,
+    HIPAAService,
   ],
 })
 export class SecurityModule {}

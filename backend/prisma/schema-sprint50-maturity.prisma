@@ -1,0 +1,465 @@
+// Prisma schema for Sprint 50: Platform Maturity & Handover
+// This schema defines all models for documentation, training, runbooks, releases, QA, and sign-offs
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// DOCUMENTATION MODELS
+// ============================================================================
+
+model Documentation {
+  id              String   @id @default(uuid())
+  category        String   // api, architecture, user, developer
+  title           String
+  content         String   @db.Text
+  version         String
+  lastUpdated    DateTime @default(now())
+  author          String
+  status          String   // draft, review, published, archived
+  tags            String[]
+  views           Int      @default(0)
+  helpfulCount   Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([tags])
+}
+
+model DocumentationVersion {
+  id              String   @id @default(uuid())
+  documentationId String
+  version         String
+  content         String   @db.Text
+  changelog       String?  @db.Text
+  createdAt      DateTime @default(now())
+  createdBy       String
+
+  @@index([documentationId])
+}
+
+// ============================================================================
+// TRAINING MODELS
+// ============================================================================
+
+model TrainingMaterial {
+  id              String   @id @default(uuid())
+  type            String   // video, lab, documentation, assessment
+  title           String
+  description     String
+  content         Json     // Content based on type
+  duration        Int      // minutes for video/lab
+  difficulty      String   // beginner, intermediate, advanced
+  category        String
+  tags            String[]
+  status          String   // draft, published, archived
+  order           Int      @default(0)
+  thumbnail       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([category])
+  @@index([difficulty])
+}
+
+model TrainingProgress {
+  id              String   @id @default(uuid())
+  userId          String
+  materialId      String
+  progress        Float    // 0-100
+  status          String   // not_started, in_progress, completed
+  timeSpent       Int      @default(0) // minutes
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  lastAccessedAt  DateTime @default(now())
+
+  @@unique([userId, materialId])
+  @@index([userId])
+  @@index([materialId])
+}
+
+model TrainingAssessment {
+  id              String   @id @default(uuid())
+  materialId      String
+  title           String
+  questions       Json     // Array of questions with answers
+  passingScore    Float    @default(70.0)
+  timeLimit       Int?     // minutes
+  attempts        Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([materialId])
+}
+
+model AssessmentResult {
+  id              String   @id @default(uuid())
+  userId          String
+  assessmentId    String
+  score           Float
+  passed          Boolean
+  answers         Json
+  timeSpent       Int      // minutes
+  attemptNumber   Int      @default(1)
+  completedAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([assessmentId])
+}
+
+// ============================================================================
+// RUNBOOK MODELS
+// ============================================================================
+
+model Runbook {
+  id              String   @id @default(uuid())
+  category        String   // incident, deployment, troubleshooting, maintenance, escalation
+  title           String
+  content         String   @db.Text
+  version         String
+  lastUpdated    DateTime @default(now())
+  author          String
+  status          String   // draft, published, archived
+  tags            String[]
+  priority        String   // critical, high, medium, low
+  estimatedTime   Int?     // minutes
+  prerequisites   String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([priority])
+  @@index([tags])
+}
+
+model RunbookExecution {
+  id              String   @id @default(uuid())
+  runbookId       String
+  executedBy      String
+  status          String   // success, failed, partial, cancelled
+  notes           String?  @db.Text
+  output          Json?
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  duration        Int?     // seconds
+
+  @@index([runbookId])
+  @@index([executedBy])
+  @@index([status])
+}
+
+model RunbookStep {
+  id              String   @id @default(uuid())
+  runbookId       String
+  stepNumber      Int
+  title           String
+  instruction     String   @db.Text
+  command         String?  // Optional shell command
+  expectedOutput  String?
+  timeout         Int      @default(300) // seconds
+  continueOnFail   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([runbookId])
+  @@unique([runbookId, stepNumber])
+}
+
+// ============================================================================
+// RELEASE MANAGEMENT MODELS
+// ============================================================================
+
+model ReleasePlan {
+  id              String   @id @default(uuid())
+  version         String
+  name            String
+  description     String
+  status          String   // planning, scheduled, in_progress, released, cancelled, rolled_back
+  scheduledDate   DateTime?
+  releaseNotes    String?  @db.Text
+  changelog       Json     // Array of changes
+  riskLevel       String   // low, medium, high, critical
+  rollbackPlan    String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  releasedAt      DateTime?
+
+  @@index([status])
+  @@index([version])
+}
+
+model ReleaseApproval {
+  id              String   @id @default(uuid())
+  releaseId       String
+  approverRole    String
+  approverId      String
+  approverName    String
+  status          String   // pending, approved, rejected
+  comments        String?
+  approvedAt      DateTime?
+
+  @@index([releaseId])
+  @@index([status])
+}
+
+model ReleaseDeployment {
+  id              String   @id @default(uuid())
+  releaseId       String
+  environment     String   // development, staging, production
+  status          String   // pending, in_progress, success, failed, rolled_back
+  deployedBy      String
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  duration        Int?     // seconds
+  output          Json?
+  healthCheck     Json?
+
+  @@index([releaseId])
+  @@index([environment])
+}
+
+model ReleaseRollback {
+  id              String   @id @default(uuid())
+  releaseId       String
+  deploymentId    String
+  reason          String
+  rolledBackBy    String
+  rolledBackAt    DateTime @default(now())
+  status          String   // pending, in_progress, success, failed
+
+  @@index([releaseId])
+}
+
+// ============================================================================
+// QUALITY ASSURANCE MODELS
+// ============================================================================
+
+model QAReport {
+  id              String   @id @default(uuid())
+  releaseId       String
+  testType        String   // functional, performance, security, accessibility, uat
+  status          String   // pending, in_progress, passed, failed, blocked
+  coverage        Float    // percentage
+  issues          Json     // Array of issues found
+  resolvedIssues  Json     // Array of resolved issues
+  executedBy      String
+  executedAt      DateTime @default(now())
+  completedAt     DateTime?
+  duration        Int?     // seconds
+  environment     String
+  testResults     Json?    // Detailed test results
+
+  @@index([releaseId])
+  @@index([testType])
+  @@index([status])
+}
+
+model QATestSuite {
+  id              String   @id @default(uuid())
+  name            String
+  description     String
+  type            String   // unit, integration, e2e, performance, security
+  tests           Json     // Array of test definitions
+  environment     String
+  status          String   // active, deprecated
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([type])
+}
+
+model QATestExecution {
+  id              String   @id @default(uuid())
+  suiteId         String
+  status          String   // pending, running, passed, failed
+  passed          Int      @default(0)
+  failed          Int      @default(0)
+  skipped         Int      @default(0)
+  duration        Int?     // seconds
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  output          Json?
+
+  @@index([suiteId])
+  @@index([status])
+}
+
+// ============================================================================
+// SIGN-OFF MODELS
+// ============================================================================
+
+model SignOff {
+  id              String   @id @default(uuid())
+  stakeholderType String   // executive, engineering, security, compliance, operations, product
+  stakeholderId   String
+  stakeholderName String
+  area            String   // performance, security, compliance, functionality, accessibility, overall
+  status          String   // pending, approved, rejected, needs_revision
+  comments        String?
+  evidence        Json     // Proof of completion
+  conditions      String[] // Conditions for approval
+  approvedAt      DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([stakeholderType])
+  @@index([stakeholderId])
+  @@index([status])
+  @@index([area])
+}
+
+model SignOffReview {
+  id              String   @id @default(uuid())
+  signOffId       String
+  reviewerId      String
+  reviewerName    String
+  comments        String
+  rating          Int?     // 1-5
+  findings        Json?
+  createdAt       DateTime @default(now())
+
+  @@index([signOffId])
+}
+
+// ============================================================================
+// PLATFORM METRICS MODELS
+// ============================================================================
+
+model PlatformMetrics {
+  id              String   @id @default(uuid())
+  date            DateTime @default(now()) @db.Date
+  uptime          Float    // percentage
+  performance     Float    // score 0-100
+  security        Float    // score 0-100
+  userSatisfaction Float   // score 0-100
+  costEfficiency  Float    // score 0-100
+  overallScore    Float    // weighted average
+  incidentsCount  Int      @default(0)
+  deploymentsCount Int     @default(0)
+  issuesResolved  Int      @default(0)
+  newIssues        Int     @default(0)
+  createdAt       DateTime @default(now())
+
+  @@unique([date])
+  @@index([date])
+}
+
+model MetricsThreshold {
+  id              String   @id @default(uuid())
+  metric          String   // uptime, performance, security, etc.
+  warning         Float    // Warning threshold
+  critical        Float    // Critical threshold
+  unit            String   // percentage, ms, count, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([metric])
+}
+
+// ============================================================================
+// FAQ MODELS
+// ============================================================================
+
+model FAQ {
+  id              String   @id @default(uuid())
+  question        String
+  answer          String   @db.Text
+  category        String
+  keywords        String[]
+  helpfulCount    Int      @default(0)
+  notHelpfulCount Int      @default(0)
+  viewCount       Int      @default(0)
+  status          String   // draft, published, archived
+  relatedFaqs     String[] // Related FAQ IDs
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([keywords])
+}
+
+// ============================================================================
+// KNOWLEDGE TRANSFER MODELS
+// ============================================================================
+
+model KnowledgeTransfer {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  type            String   // workshop, seminar, hands_on, certification
+  targetAudience  String[]
+  objectives      String[]
+  duration        Int      // minutes
+  materials       Json     // Array of material references
+  schedule        Json?
+  status          String   // planned, scheduled, completed, cancelled
+  maxParticipants Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([type])
+  @@index([status])
+}
+
+model KnowledgeTransferAttendance {
+  id              String   @id @default(uuid())
+  transferId      String
+  userId          String
+  attended        Boolean  @default(false)
+  feedback        String?  @db.Text
+  rating          Int?     // 1-5
+  certificate     Boolean  @default(false)
+  completedAt     DateTime?
+
+  @@index([transferId])
+  @@index([userId])
+}
+
+// ============================================================================
+// PLATFORM HANDOVER MODELS
+// ============================================================================
+
+model PlatformHandover {
+  id              String   @id @default(uuid())
+  phase           String   // planning, preparation, execution, verification, completion
+  status          String   // pending, in_progress, completed
+  owner           String
+  startDate       DateTime
+  targetDate      DateTime
+  completedDate   DateTime?
+  checklist       Json     // Array of checklist items
+  blockers        Json     // Array of blockers
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([phase])
+  @@index([status])
+}
+
+model HandoverChecklist {
+  id              String   @id @default(uuid())
+  handoverId      String
+  category        String   // documentation, training, access, systems, support
+  item            String
+  status          String   // pending, in_progress, completed, blocked
+  owner           String
+  dueDate         DateTime?
+  completedAt     DateTime?
+  notes           String?
+
+  @@index([handoverId])
+  @@index([category])
+  @@index([status])
+}

@@ -1,0 +1,206 @@
+// Prisma Schema - Sprint 46 Mobile Application Development
+// Add these models to the main schema.prisma file
+
+// ============ MOBILE DEVICE MANAGEMENT ============
+
+model MobileDevice {
+  id              String   @id @default(uuid())
+  userId          String
+  deviceToken     String
+  platform        String   // ios, android
+  osVersion       String
+  appVersion      String
+  lastActiveAt    DateTime @default(now())
+  pushEnabled     Boolean  @default(true)
+  fcmToken        String?  // Firebase Cloud Messaging token
+  apnsToken       String?  // Apple Push Notification service token
+  deviceModel     String?
+  language        String   @default("en")
+  timezone        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([deviceToken])
+}
+
+// ============ MOBILE WIDGETS ============
+
+model MobileWidget {
+  id              String   @id @default(uuid())
+  userId          String
+  widgetType      String   // jobs, applications, interviews
+  config          Json     // Widget-specific configuration
+  refreshInterval Int      @default(15) // minutes
+  isEnabled       Boolean  @default(true)
+  position        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ============ MOBILE SYNC LOG ============
+
+model MobileSyncLog {
+  id              String   @id @default(uuid())
+  userId          String
+  deviceId        String
+  syncType        String   // full, incremental
+  status          String   // pending, in_progress, completed, failed
+  recordsSynced   Int      @default(0)
+  errorMessage    String?
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  
+  @@index([userId])
+  @@index([deviceId])
+}
+
+// ============ OFFLINE CHANGES ============
+
+model OfflineChange {
+  id              String   @id @default(uuid())
+  userId          String
+  deviceId        String
+  entityType      String   // job_application, job_posting, resume, etc.
+  entityId        String
+  operation       String   // create, update, delete
+  data            Json     // Changed data
+  localCreatedAt  DateTime @default(now())
+  syncedAt        DateTime?
+  syncStatus      String   @default("pending") // pending, synced, failed
+  retryCount      Int      @default(0)
+
+  @@index([userId, deviceId])
+  @@index([syncStatus])
+}
+
+// ============ APP STORE REVIEWS ============
+
+model AppStoreReview {
+  id              String   @id @default(uuid())
+  platform        String   // app_store, google_play
+  rating          Int      // 1-5 stars
+  review          String?
+  country         String
+  response        String?
+  respondedAt     DateTime?
+  isFeatured      Boolean  @default(false)
+  helpfulCount    Int      @default(0)
+  userId          String?  // If the review is linked to a user account
+  externalId      String?  // External review ID from app store
+  createdAt       DateTime @default(now())
+
+  @@index([platform])
+  @@index([rating])
+}
+
+// ============ MOBILE ANALYTICS ============
+
+model MobileAnalyticsEvent {
+  id              String   @id @default(uuid())
+  userId          String
+  deviceId        String
+  eventType       String   // screen_view, button_tap, search, application_created, etc.
+  eventData       Json
+  sessionId       String
+  appVersion      String
+  platform        String
+  timestamp       DateTime @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([timestamp])
+}
+
+// ============ PUSH NOTIFICATION LOG ============
+
+model PushNotificationLog {
+  id              String   @id @default(uuid())
+  userId          String
+  deviceId        String
+  notificationId  String
+  type            String   // job_match, application_update, interview_reminder, etc.
+  title           String
+  body            String
+  data            Json?
+  status          String   // queued, sent, delivered, failed
+  sentAt          DateTime @default(now())
+  deliveredAt     DateTime?
+  clickedAt       DateTime?
+  failedReason    String?
+
+  @@index([userId])
+  @@index([status])
+  @@index([sentAt])
+}
+
+// ============ DEEP LINKS ============
+
+model DeepLink {
+  id              String   @id @default(uuid())
+  userId          String?
+  linkType        String   // job, application, interview, profile
+  targetId        String   // ID of the target entity
+  customPath      String?  // Optional custom path
+  utmSource       String?
+  utmMedium       String?
+  utmCampaign     String?
+  expiresAt       DateTime?
+  clickCount      Int      @default(0)
+  lastClickedAt   DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([linkType, targetId])
+}
+
+// ============ BIOMETRIC REGISTRATION ============
+
+model BiometricRegistration {
+  id              String   @id @default(uuid())
+  userId          String
+  deviceId        String
+  publicKey       String
+  keyId           String   // Key identifier for revocation
+  isActive        Boolean  @default(true)
+  lastUsedAt      DateTime?
+  createdAt       DateTime @default(now())
+  revokedAt       DateTime?
+
+  @@index([userId])
+  @@index([deviceId])
+}
+
+// ============ USER PREFERENCES ============
+
+model UserMobilePreferences {
+  id                      String   @id @default(uuid())
+  userId                  String   @unique
+  
+  // Notification preferences
+  pushJobMatches           Boolean  @default(true)
+  pushApplicationUpdates   Boolean  @default(true)
+  pushInterviewReminders   Boolean  @default(true)
+  pushMessages            Boolean  @default(true)
+  pushWeeklyDigest        Boolean  @default(true)
+  emailJobMatches          Boolean  @default(true)
+  emailApplications       Boolean  @default(true)
+  emailInterviews         Boolean  @default(true)
+  emailMessages           Boolean  @default(true)
+  
+  // Display preferences
+  theme                   String   @default("system") // light, dark, system
+  language               String   @default("en")
+  dateFormat             String   @default("MM/dd/yyyy")
+  currency               String   @default("USD")
+  
+  // Privacy
+  showProfile             Boolean  @default(true)
+  showApplications        Boolean  @default(true)
+  
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}

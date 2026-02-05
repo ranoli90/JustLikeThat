@@ -1,0 +1,223 @@
+// Sprint 39: Monitoring & Observability Platform Schema
+// This extends the base schema with tracing, metrics, alerting, SLO, and remediation models
+
+// Distributed Tracing Models
+model Trace {
+  id              String   @id @default(uuid())
+  traceId         String
+  spanId          String
+  parentSpanId    String?
+  operationName   String
+  serviceName     String
+  startTime       DateTime
+  duration        Int      // milliseconds
+  tags            Json
+  logs            Json?
+  createdAt       DateTime @default(now())
+
+  @@index([traceId])
+  @@index([serviceName])
+  @@index([startTime])
+}
+
+// Metrics Collection Models
+model MetricSeries {
+  id              String   @id @default(uuid())
+  name            String
+  labels          Json
+  value           Float
+  timestamp       DateTime
+  createdAt       DateTime @default(now())
+
+  @@index([name])
+  @@index([timestamp])
+}
+
+model MetricQuery {
+  id              String   @id @default(uuid())
+  name            String
+  expr            String   // PromQL expression
+  labels          Json?
+  interval        String   @default("15s")
+  createdAt       DateTime @default(now())
+}
+
+// Alerting Models
+model Alert {
+  id              String   @id @default(uuid())
+  name            String
+  severity        String   // critical, warning, info
+  status          String   // firing, pending, resolved
+  labels          Json
+  annotations     Json
+  startsAt        DateTime
+  endsAt          DateTime?
+  firedBy         String
+  ruleId          String
+  createdAt       DateTime @default(now())
+
+  @@index([status])
+  @@index([severity])
+  @@index([startsAt])
+}
+
+model AlertRule {
+  id              String   @id @default(uuid())
+  name            String
+  expr            String   // PromQL expression
+  for             String   // duration
+  labels          Json
+  annotations     Json
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([isActive])
+}
+
+model AlertSilence {
+  id              String   @id @default(uuid())
+  matchers        Json     // JSON array of matchers
+  startsAt        DateTime
+  endsAt          DateTime
+  createdBy       String
+  comment         String?
+  createdAt       DateTime @default(now())
+}
+
+// SLO/SLI Models
+model SLOConfig {
+  id              String   @id @default(uuid())
+  name            String
+  description     String
+  serviceName     String
+  sliType         String   // availability, latency, quality
+  target          Float    // percentage
+  window          String   // 30d, 90d, 365d
+  alertsEnabled   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([serviceName])
+}
+
+model SLIResult {
+  id              String   @id @default(uuid())
+  sloId           String
+  timestamp       DateTime
+  measurement     Float
+  totalRequests   Int
+  successfulRequests Int
+  createdAt       DateTime @default(now())
+
+  @@index([sloId])
+  @@index([timestamp])
+}
+
+model ErrorBudget {
+  id              String   @id @default(uuid())
+  sloId           String
+  startTime       DateTime
+  endTime         DateTime
+  budget          Float    // total budget in percentage
+  consumed        Float    // consumed budget
+  remaining       Float    // remaining budget
+  burnRate        Float    // burn rate per second
+  createdAt       DateTime @default(now())
+
+  @@index([sloId])
+}
+
+// Remediation Models
+model RemediationAction {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  triggerType     String   // alert, metric, manual
+  condition       Json
+  action          Json
+  isActive        Boolean  @default(true)
+  lastTriggered   DateTime?
+  successCount    Int      @default(0)
+  failureCount    Int      @default(0)
+  cooldown        Int      @default(300) // seconds
+  requireApproval Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([isActive])
+  @@index([triggerType])
+}
+
+model RemediationExecution {
+  id              String   @id @default(uuid())
+  actionId        String
+  triggerType     String
+  triggerId       String?
+  status          String   // pending, running, succeeded, failed
+  startedAt       DateTime
+  completedAt     DateTime?
+  result          Json?
+  error           String?
+  createdAt       DateTime @default(now())
+
+  @@index([actionId])
+  @@index([status])
+}
+
+// Log Aggregation Models
+model LogEntry {
+  id              String   @id @default(uuid())
+  timestamp       DateTime
+  level           String   // debug, info, warn, error
+  serviceName     String
+  traceId         String?
+  spanId          String?
+  message         String
+  metadata        Json
+  createdAt       DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([serviceName])
+  @@index([level])
+  @@index([traceId])
+}
+
+// Anomaly Detection Models
+model AnomalyDetection {
+  id              String   @id @default(uuid())
+  name            String
+  metricName      String
+  modelType       String   // zscore, iqr, isolation_forest, lstm
+  config          Json     // model configuration
+  threshold       Float
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([isActive])
+}
+
+model AnomalyResult {
+  id              String   @id @default(uuid())
+  detectionId     String
+  timestamp       DateTime
+  metricValue     Float
+  expectedValue   Float?
+  anomalyScore    Float
+  isAnomaly       Boolean
+  createdAt       DateTime @default(now())
+
+  @@index([detectionId])
+  @@index([timestamp])
+  @@index([isAnomaly])
+}
+
+// Service Map Models
+model ServiceDependency {
+  id              String   @id @default(uuid())
+  sourceService   String
+  targetService   String
+  callCount       Int      @default(0)
+  avgLatency      Float    @default(0)
+  errorRate       Float    @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sourceService, targetService])
+}

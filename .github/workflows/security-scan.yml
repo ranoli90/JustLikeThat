@@ -1,0 +1,247 @@
+# =============================================================================
+# Security Scan Pipeline - Sprint 38
+# Comprehensive security scanning for all code and infrastructure
+# =============================================================================
+
+name: Security Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly scan
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ===========================================================================
+  # Dependency Vulnerability Scan
+  # ===========================================================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run npm audit
+        run: |
+          cd backend && npm audit --audit-level=high --json > npm-audit-backend.json || true
+          cd ../frontend && npm audit --audit-level=high --json > npm-audit-frontend.json || true
+
+      - name: Upload npm audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-results
+          path: |
+            backend/npm-audit-backend.json
+            frontend/npm-audit-frontend.json
+
+      - name: Comment on PR with vulnerabilities
+        uses: actions/github-script@v7
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+            const audit = JSON.parse(fs.readFileSync('backend/npm-audit-backend.json', 'utf8'));
+            const count = audit.vulnerabilities ? Object.values(audit.vulnerabilities).length : 0;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⚠️ **Security Alert**: Found ${count} vulnerabilities in backend dependencies`
+            })
+
+  # ===========================================================================
+  # Secret Scanning
+  # ===========================================================================
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/truffle-hog-action@main
+        with:
+          args: --path=. --rules=.github/trufflehog-rules.toml
+
+      - name: Run git-secrets
+        uses: aws-actions/git-secrets-scan@v1
+        with:
+          scan-args: '--no-git'
+
+      - name: Upload scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: secret-scan-results
+          path: |
+            trufflehog-results.txt
+            git-secrets-results.txt
+
+  # ===========================================================================
+  # SAST Scanning
+  # ===========================================================================
+  sast-scan:
+    name: Static Analysis Security Testing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: |
+            javascript
+            typescript
+            python
+          queries: security-and-quality
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: 'p/security-audit'
+
+      - name: Run Checkmarx
+        uses: checkmarx/ast-github-action@main
+        if: ${{ secrets.CHECKMARX_TOKEN != '' }}
+        with:
+          server_url: ${{ secrets.CHECKMARX_SERVER }}
+          client_id: ${{ secrets.CHECKMARX_CLIENT_ID }}
+          client_secret: ${{ secrets.CHECKMARX_CLIENT_SECRET }}
+          project_name: ${{ github.event.repository.name }}
+          scan_type: full
+          limit_results: true
+
+  # ===========================================================================
+  # Container Security Scan
+  # ===========================================================================
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: apply-as-a-service:latest
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'apply-as-a-service:latest'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Fail on critical vulnerabilities
+        run: |
+          if grep -q '"Severity": "CRITICAL"' trivy-results.json; then
+            echo "Critical vulnerabilities found!"
+            exit 1
+          fi
+
+  # ===========================================================================
+  # Infrastructure Security Scan
+  # ===========================================================================
+  infra-scan:
+    name: Infrastructure Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: '1.5.7'
+
+      - name: Run tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          soft_fail: true
+          args: --format sarif --out tfsec-results.sarif terraform/
+
+      - name: Upload tfsec results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'tfsec-results.sarif'
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'checkov-results.sarif'
+
+  # ===========================================================================
+  # Generate Security Report
+  # ===========================================================================
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, secret-scan, sast-scan, container-scan, infra-scan]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate report
+        run: |
+          echo "# Security Scan Report" > security-report.md
+          echo "Generated: $(date)" >> security-report.md
+          echo "" >> security-report.md
+          echo "## Summary" >> security-report.md
+          echo "- Dependency Scan: ${{ needs.dependency-scan.result }}" >> security-report.md
+          echo "- Secret Scan: ${{ needs.secret-scan.result }}" >> security-report.md
+          echo "- SAST Scan: ${{ needs.sast-scan.result }}" >> security-report.md
+          echo "- Container Scan: ${{ needs.container-scan.result }}" >> security-report.md
+          echo "- Infrastructure Scan: ${{ needs.infra-scan.result }}" >> security-report.md
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+
+      - name: Create issue for vulnerabilities
+        uses: actions/github-script@v7
+        if: ${{ github.event_name == 'schedule' }}
+        with:
+          script: |
+            github.rest.issues.create({
+              title: 'Weekly Security Scan Report',
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'Security scan completed. Review attached artifacts for details.'
+            })

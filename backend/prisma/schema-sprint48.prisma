@@ -1,0 +1,230 @@
+// Prisma Schema for Sprint 48 - Platform Maintenance & Innovation
+// This schema adds models for technical debt tracking, security patches,
+// dependency updates, innovation sandbox, and performance optimization.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== TECHNICAL DEBT MODELS ====================
+
+model TechnicalDebt {
+  id              String   @id @default(uuid())
+  category        String   // code, database, security, performance
+  severity        String   // critical, high, medium, low
+  description     String
+  filePath        String
+  lineNumber      Int?
+  estimatedHours  Float
+  actualHours     Float?
+  status          String   // identified, planned, in_progress, completed, accepted
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([category, severity])
+  @@index([status])
+}
+
+model CodeQualityMetrics {
+  id              String   @id @default(uuid())
+  serviceName     String
+  date            DateTime @default(now())
+  coverage        Float
+  complexity      Float
+  duplication     Float
+  securityRating  String
+  maintainability Float
+  technicalDebt  Float    // percentage
+  createdAt       DateTime @default(now())
+  
+  @@index([serviceName, date])
+}
+
+// ==================== SECURITY PATCH MODELS ====================
+
+model SecurityPatch {
+  id              String   @id @default(uuid())
+  vulnerabilityId String   // CVE or internal ID
+  severity        String   // critical, high, medium, low
+  affectedSystems String[]
+  patchVersion   String
+  status          String   // available, testing, deployed, failed
+  deployedAt     DateTime?
+  createdAt       DateTime @default(now())
+  
+  @@index([severity, status])
+  @@index([vulnerabilityId])
+}
+
+model SecurityVulnerability {
+  id              String   @id @default(uuid())
+  cveId           String?  // CVE-2024-1234
+  title           String
+  description     String
+  severity        String   // critical, high, medium, low
+  cvssScore       Float?
+  affectedPackage String
+  fixedVersion    String?
+  status          String   // open, in_progress, resolved, ignored
+  scannedAt       DateTime @default(now())
+  resolvedAt     DateTime?
+  
+  @@index([severity, status])
+  @@index([cveId])
+}
+
+// ==================== DEPENDENCY UPDATE MODELS ====================
+
+model DependencyUpdate {
+  id              String   @id @default(uuid())
+  packageName     String
+  currentVersion  String
+  latestVersion   String
+  vulnerabilityRisk String?
+  compatibility   String   // compatible, breaking, unknown
+  status          String   // pending, testing, approved, rejected, applied
+  scheduledFor   DateTime?
+  appliedAt      DateTime?
+  changelog       String?
+  breakingChanges String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([status])
+  @@index([packageName])
+}
+
+model DependencyInventory {
+  id              String   @id @default(uuid())
+  packageName     String
+  currentVersion  String
+  latestVersion   String
+  licenseType     String
+  lastChecked     DateTime @default(now())
+  updateAvailable Boolean @default(false)
+  
+  @@unique([packageName, currentVersion])
+  @@index([updateAvailable])
+}
+
+// ==================== INNOVATION SANDBOX MODELS ====================
+
+model InnovationExperiment {
+  id              String   @id @default(uuid())
+  name            String
+  description     String
+  hypothesis      String
+  status          String   // draft, running, paused, completed, cancelled
+  featureFlagKey  String
+  metrics         Json     // Custom metrics for the experiment
+  startDate       DateTime?
+  endDate         DateTime?
+  results         Json?    // Experiment results
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([status])
+}
+
+model FeatureFlag {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  name            String
+  description     String
+  isEnabled       Boolean  @default(false)
+  rolloutPercentage Int    @default(0)
+  targeting       Json?    // User targeting rules
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([isEnabled])
+}
+
+model ExperimentParticipant {
+  id              String   @id @default(uuid())
+  experimentId    String
+  userId          String
+  variant         String   // control, treatment_a, treatment_b
+  assignedAt      DateTime @default(now())
+  
+  @@unique([experimentId, userId])
+  @@index([experimentId])
+}
+
+model UserFeedback {
+  id              String   @id @default(uuid())
+  experimentId    String?
+  featureFlagKey  String?
+  userId          String
+  feedback        String
+  rating          Int?     // 1-5 rating
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  
+  @@index([experimentId])
+  @@index([featureFlagKey])
+}
+
+// ==================== PERFORMANCE OPTIMIZATION MODELS ====================
+
+model PerformanceSnapshot {
+  id              String   @id @default(uuid())
+  serviceName     String
+  timestamp       DateTime @default(now())
+  metrics         Json     // CPU, memory, latency, throughput
+  apmData        Json?     // APM-specific metrics
+  databaseMetrics Json?
+  cacheMetrics   Json?
+  createdAt       DateTime @default(now())
+  
+  @@index([serviceName, timestamp])
+}
+
+model OptimizationRecommendation {
+  id              String   @id @default(uuid())
+  category        String   // performance, cost, security
+  title           String
+  description     String
+  impact          String   // high, medium, low
+  effort          String   // high, medium, low
+  status          String   // reviewed, approved, implemented, rejected
+  createdAt       DateTime @default(now())
+  
+  @@index([category, status])
+}
+
+model LoadTestResult {
+  id              String   @id @default(uuid())
+  testName        String
+  serviceName     String
+  timestamp       DateTime @default(now())
+  vusers          Int      // Virtual users
+  duration        Int      // Duration in seconds
+  requestsTotal   Int
+  requestsPerSec  Float
+  avgLatency      Float    // in milliseconds
+  p95Latency      Float
+  p99Latency      Float
+  errorRate       Float
+  status          String   // passed, failed, degraded
+  
+  @@index([serviceName, timestamp])
+}
+
+model CacheMetrics {
+  id              String   @id @default(uuid())
+  serviceName     String
+  timestamp       DateTime @default(now())
+  hits            Int
+  misses          Int
+  evictions       Int
+  hitRate         Float
+  avgTtl          Int      // Average TTL in seconds
+  
+  @@index([serviceName, timestamp])
+}

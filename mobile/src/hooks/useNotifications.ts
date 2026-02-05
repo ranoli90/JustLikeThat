@@ -26,7 +26,6 @@ export const useNotificationSetup = (): { isLoading: boolean; setupNotifications
   const setupNotifications = async () => {
     try {
       if (!Device.isDevice) {
-        console.log('Notifications require a physical device');
         setIsLoading(false);
         return;
       }
@@ -40,7 +39,6 @@ export const useNotificationSetup = (): { isLoading: boolean; setupNotifications
       }
 
       if (finalStatus !== 'granted') {
-        console.log('Notification permission denied');
         setIsLoading(false);
         return;
       }

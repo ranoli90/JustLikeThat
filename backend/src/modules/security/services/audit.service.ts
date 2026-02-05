@@ -1,21 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
-export interface AuditLog {
-  id: string;
+export interface AuditLogQuery {
   userId?: string;
-  action: string;
-  resourceType: string;
-  resourceId?: string;
-  details?: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
-  timestamp: Date;
-}
-
-export interface AuditQuery {
-  userId?: string;
+  tenantId?: string;
   action?: string;
-  resourceType?: string;
+  resource?: string;
+  resourceId?: string;
+  riskLevel?: string;
   startDate?: string;
   endDate?: string;
   limit?: number;
@@ -24,119 +16,125 @@ export interface AuditQuery {
 
 @Injectable()
 export class AuditService {
-  private auditLogs: AuditLog[] = [];
+  constructor(private readonly prisma: PrismaService) {}
 
   async log(data: {
     userId?: string;
+    tenantId: string;
     action: string;
-    resourceType: string;
+    resource: string;
     resourceId?: string;
-    details?: Record<string, any>;
-    ipAddress?: string;
+    ipAddress: string;
     userAgent?: string;
-  }): Promise<AuditLog> {
-    const log: AuditLog = {
-      id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      userId: data.userId,
-      action: data.action,
-      resourceType: data.resourceType,
-      resourceId: data.resourceId,
-      details: data.details,
-      ipAddress: data.ipAddress,
-      userAgent: data.userAgent,
-      timestamp: new Date(),
-    };
-
-    this.auditLogs.push(log);
-
-    // Keep only last 10000 logs in memory
-    if (this.auditLogs.length > 10000) {
-      this.auditLogs = this.auditLogs.slice(-10000);
-    }
+    details?: Record<string, any>;
+    riskLevel?: string;
+  }): Promise<any> {
+    const log = await this.prisma.securityAuditLog.create({
+      data: {
+        userId: data.userId,
+        tenantId: data.tenantId,
+        action: data.action,
+        resource: data.resource,
+        resourceId: data.resourceId,
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent,
+        details: data.details || {},
+        riskLevel: data.riskLevel || 'low',
+      },
+    });
 
     return log;
   }
 
-  async getAuditLogs(query: AuditQuery): Promise<{ logs: AuditLog[]; total: number }> {
-    let filtered = [...this.auditLogs];
+  async getAuditLogs(query: AuditLogQuery): Promise<{ logs: any[]; total: number }> {
+    const where: any = {};
 
-    if (query.userId) {
-      filtered = filtered.filter((log) => log.userId === query.userId);
+    if (query.userId) where.userId = query.userId;
+    if (query.tenantId) where.tenantId = query.tenantId;
+    if (query.action) where.action = { contains: query.action, mode: 'insensitive' };
+    if (query.resource) where.resource = query.resource;
+    if (query.resourceId) where.resourceId = query.resourceId;
+    if (query.riskLevel) where.riskLevel = query.riskLevel;
+
+    if (query.startDate || query.endDate) {
+      where.createdAt = {};
+      if (query.startDate) where.createdAt.gte = new Date(query.startDate);
+      if (query.endDate) where.createdAt.lte = new Date(query.endDate);
     }
 
-    if (query.action) {
-      const actionFilter = query.action;
-      filtered = filtered.filter((log) => log.action && log.action.includes(actionFilter));
-    }
+    const [logs, total] = await Promise.all([
+      this.prisma.securityAuditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: query.limit || 100,
+        skip: query.offset || 0,
+      }),
+      this.prisma.securityAuditLog.count({ where }),
+    ]);
 
-    if (query.resourceType) {
-      filtered = filtered.filter((log) => log.resourceType === query.resourceType);
-    }
-
-    if (query.startDate) {
-      const start = new Date(query.startDate);
-      filtered = filtered.filter((log) => log.timestamp >= start);
-    }
-
-    if (query.endDate) {
-      const end = new Date(query.endDate);
-      filtered = filtered.filter((log) => log.timestamp <= end);
-    }
-
-    // Sort by timestamp descending
-    filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-    const total = filtered.length;
-
-    const offset = query.offset || 0;
-    const limit = query.limit || 100;
-
-    filtered = filtered.slice(offset, offset + limit);
-
-    return { logs: filtered, total };
+    return { logs, total };
   }
 
-  async getAuditLog(id: string): Promise<AuditLog | null> {
-    return this.auditLogs.find((log) => log.id === id) || null;
+  async getAuditLog(id: string): Promise<any> {
+    return this.prisma.securityAuditLog.findUnique({ where: { id } });
   }
 
-  async exportAuditLogs(startDate: string, endDate: string): Promise<{ data: AuditLog[]; exportedAt: string }> {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    const filtered = this.auditLogs.filter(
-      (log) => log.timestamp >= start && log.timestamp <= end,
-    );
+  async exportAuditLogs(
+    tenantId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<{ data: any[]; exportedAt: string }> {
+    const logs = await this.prisma.securityAuditLog.findMany({
+      where: {
+        tenantId,
+        createdAt: {
+          gte: new Date(startDate),
+          lte: new Date(endDate),
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
 
     return {
-      data: filtered,
+      data: logs,
       exportedAt: new Date().toISOString(),
     };
   }
 
-  async getAuditStatistics(): Promise<{
+  async getAuditStatistics(
+    tenantId: string,
+    days: number = 30,
+  ): Promise<{
     byAction: Record<string, number>;
-    byResourceType: Record<string, number>;
-    byDay: { date: string; count: number }[];
+    byResource: Record<string, number>;
+    byRiskLevel: Record<string, number>;
+    trend: { date: string; count: number }[];
     topUsers: { userId: string; count: number }[];
+    totalLogs: number;
   }> {
+    const startDate = new Date(Date.now() - days * 86400000);
+
+    const logs = await this.prisma.securityAuditLog.findMany({
+      where: {
+        tenantId,
+        createdAt: { gte: startDate },
+      },
+    });
+
     const byAction: Record<string, number> = {};
-    const byResourceType: Record<string, number> = {};
+    const byResource: Record<string, number> = {};
+    const byRiskLevel: Record<string, number> = {};
     const byDay: Record<string, number> = {};
     const userCounts: Record<string, number> = {};
 
-    this.auditLogs.forEach((log) => {
-      // By action
+    logs.forEach((log) => {
       byAction[log.action] = (byAction[log.action] || 0) + 1;
+      byResource[log.resource] = (byResource[log.resource] || 0) + 1;
+      byRiskLevel[log.riskLevel] = (byRiskLevel[log.riskLevel] || 0) + 1;
 
-      // By resource type
-      byResourceType[log.resourceType] = (byResourceType[log.resourceType] || 0) + 1;
-
-      // By day
-      const day = log.timestamp.toISOString().split('T')[0];
+      const day = log.createdAt.toISOString().split('T')[0];
       byDay[day] = (byDay[day] || 0) + 1;
 
-      // By user
       if (log.userId) {
         userCounts[log.userId] = (userCounts[log.userId] || 0) + 1;
       }
@@ -147,18 +145,77 @@ export class AuditService {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    const last7Days: { date: string; count: number }[] = [];
-    for (let i = 6; i >= 0; i--) {
+    // Generate trend data
+    const trend: { date: string; count: number }[] = [];
+    for (let i = days - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 86400000);
       const dateStr = date.toISOString().split('T')[0];
-      last7Days.push({ date: dateStr, count: byDay[dateStr] || 0 });
+      trend.push({ date: dateStr, count: byDay[dateStr] || 0 });
     }
 
     return {
       byAction,
-      byResourceType,
-      byDay: last7Days,
+      byResource,
+      byRiskLevel,
+      trend,
       topUsers,
+      totalLogs: logs.length,
     };
+  }
+
+  async searchAuditLogs(
+    tenantId: string,
+    searchParams: {
+      query?: string;
+      filters?: Record<string, any>;
+      dateRange?: { start: string; end: string };
+    },
+  ): Promise<{ logs: any[]; total: number }> {
+    const where: any = { tenantId };
+
+    if (searchParams.query) {
+      where.OR = [
+        { action: { contains: searchParams.query, mode: 'insensitive' } },
+        { resource: { contains: searchParams.query, mode: 'insensitive' } },
+        { resourceId: { contains: searchParams.query, mode: 'insensitive' } },
+        { ipAddress: { contains: searchParams.query } },
+      ];
+    }
+
+    if (searchParams.filters) {
+      Object.assign(where, searchParams.filters);
+    }
+
+    if (searchParams.dateRange) {
+      where.createdAt = {
+        gte: new Date(searchParams.dateRange.start),
+        lte: new Date(searchParams.dateRange.end),
+      };
+    }
+
+    const [logs, total] = await Promise.all([
+      this.prisma.securityAuditLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: 1000,
+      }),
+      this.prisma.securityAuditLog.count({ where }),
+    ]);
+
+    return { logs, total };
+  }
+
+  async getHighRiskLogs(
+    tenantId: string,
+    limit: number = 100,
+  ): Promise<any[]> {
+    return this.prisma.securityAuditLog.findMany({
+      where: {
+        tenantId,
+        riskLevel: { in: ['high', 'critical'] },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
   }
 }

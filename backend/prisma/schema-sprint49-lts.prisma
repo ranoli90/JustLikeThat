@@ -1,0 +1,154 @@
+// Sprint 49: Long-Term Support & Evolution - LTS Models
+// These models support SLA monitoring, capacity planning, cost optimization, 
+// technology roadmap, user feedback, and continuous improvement
+
+model SLAConfig {
+  id              String   @id @default(uuid())
+  tenantId        String?
+  serviceName     String
+  metricType      String   // availability, latency, throughput, error_rate
+  targetValue     Float
+  measurementUnit String
+  period          String   // hourly, daily, monthly
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  metrics     SLAMetric[]
+  violations  SLAViolation[]
+}
+
+model SLAMetric {
+  id          String   @id @default(uuid())
+  slaConfigId String
+  value       Float
+  timestamp   DateTime @default(now())
+  status      String   // met, violated, pending
+  createdAt   DateTime @default(now())
+
+  slaConfig SLAConfig @relation(fields: [slaConfigId], references: [id], onDelete: Cascade)
+}
+
+model SLAViolation {
+  id            String    @id @default(uuid())
+  slaConfigId   String
+  violationType String
+  severity      String    // critical, warning
+  details       Json
+  acknowledged  Boolean   @default(false)
+  acknowledgedBy String?
+  acknowledgedAt DateTime?
+  resolvedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  slaConfig SLAConfig @relation(fields: [slaConfigId], references: [id], onDelete: Cascade)
+}
+
+model CapacityReport {
+  id              String   @id @default(uuid())
+  period          String   // daily, weekly, monthly
+  startDate       DateTime
+  endDate         DateTime
+  metrics         Json     // CPU, memory, storage, network
+  predictions     Json     // Future capacity needs
+  recommendations Json
+  createdAt       DateTime @default(now())
+}
+
+model CostRecord {
+  id              String   @id @default(uuid())
+  tenantId        String?
+  serviceName     String
+  resourceType    String
+  cost            Float
+  currency        String   @default("USD")
+  usage           Json
+  tags            Json
+  billingPeriod   DateTime
+  createdAt       DateTime @default(now())
+}
+
+model CostForecast {
+  id              String   @id @default(uuid())
+  tenantId        String?
+  forecastPeriod  String   // monthly, quarterly, yearly
+  startDate       DateTime
+  endDate         DateTime
+  predictedCost   Float
+  confidence      Float
+  factors         Json
+  createdAt       DateTime @default(now())
+}
+
+model TechnologyRoadmap {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  category        String   // infrastructure, security, ai, frontend, backend
+  status          String   // planned, in_progress, completed, deferred
+  priority        Int      @default(1)
+  estimatedEffort String   // weeks, months
+  dependencies    Json
+  risks           Json
+  startDate       DateTime?
+  targetDate      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model UserFeedback {
+  id              String   @id @default(uuid())
+  userId          String
+  feedbackType    String   // feature_request, bug_report, compliment, complaint
+  category        String
+  subject         String
+  description     String
+  sentiment       Float    // -1 to 1
+  sentimentLabel   String   // positive, neutral, negative
+  priority        Int      @default(5)
+  status          String   // new, reviewed, in_progress, resolved, closed
+  response        String?
+  respondedBy     String?
+  respondedAt     DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model NPSSurvey {
+  id              String   @id @default(uuid())
+  userId          String
+  score           Int      // 0-10
+  promoters       Int      // 9-10
+  passives        Int      // 7-8
+  detractors      Int      // 0-6
+  comments        String?
+  sentAt          DateTime @default(now())
+  respondedAt     DateTime?
+}
+
+model ImprovementInitiative {
+  id              String   @id @default(uuid())
+  title           String
+  description     String
+  category        String   // performance, cost, quality, security, user_experience
+  status          String   // proposed, approved, in_progress, completed, cancelled
+  estimatedImpact String   // high, medium, low
+  estimatedCost   Float?
+  actualCost      Float?
+  roi             Float?
+  metricsBefore   Json?
+  metricsAfter    Json?
+  startDate       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model BenchmarkData {
+  id              String   @id @default(uuid())
+  category        String   // industry, competitor, best_practice
+  name            String
+  metrics         Json
+  source          String
+  collectionDate  DateTime
+  createdAt       DateTime @default(now())
+}

@@ -1,86 +1,130 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI } from '../services/api';
-import { LoginData, SignupData, User } from '../models/auth';
+import { useRouter } from 'next/navigation';
+
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  avatarUrl?: string;
+  onboardingCompleted: boolean;
+  createdAt: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  token: string | null;
-  login: (data: LoginData) => Promise<void>;
-  signup: (data: SignupData) => Promise<void>;
-  logout: () => void;
   loading: boolean;
   error: string | null;
+  login: (credentials: { email: string; password: string }) => Promise<void>;
+  signup: (data: { email: string; password: string; firstName: string; lastName: string }) => Promise<void>;
+  logout: () => void;
+  updateUser: (data: Partial<User>) => void;
+  refreshToken: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  // Initialize auth state from stored token
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+    const initAuth = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        try {
+          const response = await fetch(`${API_URL}/auth/me`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData);
+          } else {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('refresh_token');
+          }
+        } catch (err) {
+          console.error('Auth initialization failed:', err);
+        }
+      }
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
-  const login = async (data: LoginData) => {
+  const login = async (credentials: { email: string; password: string }) => {
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      const response = await authAPI.login(data);
-      const userData: User = {
-        id: 1,
-        email: data.email,
-        firstName: 'User',
-        lastName: 'Test',
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      setToken(response.access_token);
-      setUser(userData);
-      localStorage.setItem('token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const data = await response.json();
+
+      localStorage.setItem('auth_token', data.accessToken);
+      localStorage.setItem('refresh_token', data.refreshToken);
+
+      setUser(data.user);
+      router.push('/dashboard');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Login failed';
+      setError(message);
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  const signup = async (data: SignupData) => {
+  const signup = async (data: { email: string; password: string; firstName: string; lastName: string }) => {
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      const response = await authAPI.signup(data);
-      const userData: User = {
-        id: 1,
-        email: data.email,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      setToken(response.access_token);
-      setUser(userData);
-      localStorage.setItem('token', response.access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Signup failed');
+      const response = await fetch(`${API_URL}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Signup failed');
+      }
+
+      const responseData = await response.json();
+
+      localStorage.setItem('auth_token', responseData.accessToken);
+      localStorage.setItem('refresh_token', responseData.refreshToken);
+
+      setUser(responseData.user);
+      router.push('/intake');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Signup failed';
+      setError(message);
       throw err;
     } finally {
       setLoading(false);
@@ -88,33 +132,69 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    setToken(null);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refresh_token');
     setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    router.push('/login');
+  };
+
+  const updateUser = (data: Partial<User>) => {
+    if (user) {
+      setUser({ ...user, ...data });
+    }
+  };
+
+  const refreshToken = async () => {
+    const refreshTokenValue = localStorage.getItem('refresh_token');
+    if (!refreshTokenValue) {
+      throw new Error('No refresh token');
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refreshToken: refreshTokenValue }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Token refresh failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('auth_token', data.accessToken);
+
+      return data.accessToken;
+    } catch (err) {
+      logout();
+      throw err;
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
+        loading,
+        error,
         login,
         signup,
         logout,
-        loading,
-        error,
+        updateUser,
+        refreshToken,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
+}

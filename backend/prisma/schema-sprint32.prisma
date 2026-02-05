@@ -1,0 +1,384 @@
+// Prisma schema for Enterprise Scalability Infrastructure
+// Sprint 32: Enterprise Scalability Infrastructure
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// SHARDING CONFIGURATION
+// ============================================================================
+
+model ShardConfig {
+  id           String   @id @default(uuid())
+  shardId      Int      @unique
+  nodeUrl      String
+  host         String
+  port         Int
+  databaseName String
+  role         ShardRole @default(PRIMARY)
+  status       NodeStatus @default(ACTIVE)
+  weight       Int      @default(100)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relationships
+  shardMappings ShardMapping[]
+  
+  @@index([shardId])
+  @@index([status])
+}
+
+model ShardMapping {
+  id           String   @id @default(uuid())
+  shardConfigId String
+  entityType   String   // User, Application, Resume, etc.
+  shardKey     String
+  shardId      Int
+  createdAt    DateTime @default(now())
+  
+  shardConfig  ShardConfig @relation(fields: [shardConfigId], references: [id])
+  
+  @@unique([entityType, shardKey])
+  @@index([shardKey])
+}
+
+model ShardRebalanceLog {
+  id           String   @id @default(uuid())
+  sourceShardId Int
+  targetShardId Int
+  entityType   String
+  entityIds    String[]
+  status       RebalanceStatus @default(PENDING)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+  
+  @@index([status])
+}
+
+// ============================================================================
+// SERVICE REGISTRY & DISCOVERY
+// ============================================================================
+
+model ServiceRegistry {
+  id             String   @id @default(uuid())
+  serviceName    String   @unique
+  instanceId     String   @unique
+  host           String
+  port           Int
+  protocol       String   @default("http")
+  version        String   @default("1.0.0")
+  environment    String   @default("production")
+  metadata       Json?
+  tags           String[]
+  status         ServiceStatus @default(ACTIVE)
+  registeredAt   DateTime @default(now())
+  lastHeartbeat  DateTime @updatedAt
+  deregisteredAt DateTime?
+  
+  // Health check configuration
+  healthCheckUrl String?
+  healthCheckInterval Int @default(30000) // 30 seconds
+  failureThreshold Int @default(3)
+  
+  // Relationships
+  serviceEndpoints ServiceEndpoint[]
+  healthChecks    HealthCheckLog[]
+  
+  @@index([serviceName])
+  @@index([status])
+  @@index([lastHeartbeat])
+}
+
+model ServiceEndpoint {
+  id             String   @id @default(uuid())
+  serviceRegistryId String
+  path           String
+  method         String
+  description    String?
+  rateLimit      Int?
+  timeout        Int?
+  authenticationRequired Boolean @default(true)
+  
+  serviceRegistry ServiceRegistry @relation(fields: [serviceRegistryId], references: [id])
+  
+  @@index([serviceRegistryId])
+}
+
+model HealthCheckLog {
+  id             String   @id @default(uuid())
+  serviceRegistryId String
+  status         HealthStatus
+  responseTime   Int      // milliseconds
+  errorMessage   String?
+  checkedAt      DateTime @default(now())
+  
+  serviceRegistry ServiceRegistry @relation(fields: [serviceRegistryId], references: [id])
+  
+  @@index([serviceRegistryId])
+  @@index([checkedAt])
+}
+
+// ============================================================================ CIRCUIT BREAKER & RESILIENCE ============================================================================
+
+model CircuitBreakerConfig {
+  id           String   @id @default(uuid())
+  serviceName  String   @unique
+  failureThreshold Int @default(5)
+  successThreshold Int @default(2)
+  timeoutMs    Int      @default(60000) // 1 minute
+  halfOpenRequests Int @default(3)
+  windowSizeMs Int      @default(10000) // 10 seconds
+  status       CircuitStatus @default(CLOSED)
+  lastStateChange DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([serviceName])
+}
+
+model CircuitBreakerEvent {
+  id           String   @id @default(uuid())
+  circuitBreakerId String
+  eventType    CircuitEventType
+  message      String?
+  timestamp    DateTime @default(now())
+  
+  circuitBreaker CircuitBreakerConfig @relation(fields: [circuitBreakerId], references: [id])
+  
+  @@index([circuitBreakerId])
+  @@index([timestamp])
+}
+
+// ============================================================================ CONFIGURATION MANAGEMENT ============================================================================
+
+model DistributedConfig {
+  id           String   @id @default(uuid())
+  configKey    String   @unique
+  configValue  String
+  configType   ConfigType @default(JSON)
+  service      String
+  environment  String   @default("*")
+  version      Int      @default(1)
+  description  String?
+  isEncrypted  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([configKey, service, environment])
+  @@index([service])
+  @@index([configKey])
+}
+
+model ConfigVersion {
+  id           String   @id @default(uuid())
+  configKey    String
+  configValue  String
+  version      Int
+  changedBy    String
+  changedAt    DateTime @default(now())
+  
+  @@index([configKey])
+  @@index([version])
+}
+
+// ============================================================================ MESSAGE QUEUE CONFIGURATION ============================================================================
+
+model MessageQueueConfig {
+  id           String   @id @default(uuid())
+  topic        String   @unique
+  partitions   Int      @default(32)
+  replicationFactor Int @default(3)
+  retentionMs  BigInt   @default(604800000) // 7 days
+  cleanupPolicy String  @default("delete")
+  compression  String   @default("zstd")
+  config       Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([topic])
+}
+
+model MessageQueueConsumer {
+  id           String   @id @default(uuid())
+  groupId      String
+  topic        String
+  instanceId   String
+  status       ConsumerStatus @default(ACTIVE)
+  lag          BigInt   @default(0)
+  lastProcessedAt DateTime?
+  createdAt    DateTime @default(now())
+  
+  @@unique([groupId, topic, instanceId])
+  @@index([groupId])
+  @@index([status])
+}
+
+// ============================================================================ RATE LIMITING & THROTTLING ============================================================================
+
+model RateLimitConfig {
+  id           String   @id @default(uuid())
+  serviceName  String
+  endpoint     String
+  method       String
+  maxRequests  Int
+  windowSeconds Int
+  tier         String   @default("default")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([serviceName, endpoint, method])
+  @@index([serviceName])
+}
+
+model RateLimitLog {
+  id           String   @id @default(uuid())
+  serviceName  String
+  clientId     String
+  endpoint     String
+  requestCount Int
+  windowStart  DateTime
+  allowed      Boolean
+  createdAt    DateTime @default(now())
+  
+  @@index([serviceName, clientId, windowStart])
+}
+
+// ============================================================================ GATEWAY ROUTES ============================================================================
+
+model GatewayRoute {
+  id           String   @id @default(uuid())
+  path         String   @unique
+  method       String
+  targetService String
+  targetPath   String?
+  plugins      Json?
+  timeout      Int?
+  retries      Int?
+  stripPrefix  Boolean  @default(false)
+  preserveHost Boolean  @default(false)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([path])
+  @@index([targetService])
+}
+
+// ============================================================================ SCALING & AUTOSCALING ============================================================================
+
+model ScalingPolicy {
+  id           String   @id @default(uuid())
+  serviceName  String
+  policyType   ScalingType
+  minReplicas  Int      @default(1)
+  maxReplicas  Int      @default(100)
+  targetCpu    Int?     // percentage
+  targetMemory Int?     // percentage
+  targetRequestsPerSecond Int?
+  cooldownSeconds Int   @default(300)
+  config       Json?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([serviceName, policyType])
+  @@index([serviceName])
+}
+
+model ScalingEvent {
+  id           String   @id @default(uuid())
+  serviceName  String
+  previousReplicas Int
+  newReplicas  Int
+  trigger      String
+  metrics      Json?
+  createdAt    DateTime @default(now())
+  
+  @@index([serviceName])
+  @@index([createdAt])
+}
+
+// ============================================================================ ENUMS ============================================================================
+
+enum ShardRole {
+  PRIMARY
+  REPLICA
+  READ_REPLICA
+}
+
+enum NodeStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+  FAILED
+  REBALANCING
+}
+
+enum ServiceStatus {
+  ACTIVE
+  INACTIVE
+  DRAINING
+  FAILED
+  UNKNOWN
+}
+
+enum HealthStatus {
+  HEALTHY
+  UNHEALTHY
+  DEGRADED
+  TIMEOUT
+  ERROR
+}
+
+enum RebalanceStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CircuitStatus {
+  CLOSED
+  OPEN
+  HALF_OPEN
+}
+
+enum CircuitEventType {
+  STATE_CHANGE
+  FAILURE
+  SUCCESS
+  TIMEOUT
+  REJECTED
+}
+
+enum ConfigType {
+  JSON
+  YAML
+  STRING
+  BOOLEAN
+  NUMBER
+  ARRAY
+}
+
+enum ConsumerStatus {
+  ACTIVE
+  IDLE
+  FAILED
+  RECONNECTING
+}
+
+enum ScalingType {
+  HORIZONTAL_POD_AUTOSCALER
+  VERTICAL_POD_AUTOSCALER
+  CLUSTER_AUTOSCALER
+  CUSTOM
+}

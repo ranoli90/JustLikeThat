@@ -1,0 +1,86 @@
+// ============ CAREER COACHING MODELS ============
+
+model CareerConversation {
+  id              String   @id @default(uuid())
+  userId          String
+  messages        Json
+  context         Json
+  recommendations Json
+  resolvedTopics  String[]
+  sentiment       Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SkillAssessment {
+  id              String   @id @default(uuid())
+  userId          String
+  assessedSkills  Json
+  targetRole      String
+  gapAnalysis     Json
+  recommendations Json
+  confidence      Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LearningPath {
+  id              String   @id @default(uuid())
+  userId          String
+  targetRole      String
+  courses         Json
+  milestones      Json
+  estimatedTime   Int      // hours
+  progress        Float    // 0-100
+  status          String   // active, completed, paused
+  createdAt       DateTime @default(now())
+  completedAt     DateTime?
+}
+
+model TrajectorySimulation {
+  id              String   @id @default(uuid())
+  userId          String
+  currentRole     String
+  targetRole      String
+  simulations     Json     // Multiple scenarios
+  projections     Json     // Salary, timeline
+  recommendations Json
+  createdAt       DateTime @default(now())
+}
+
+model InterviewPractice {
+  id              String   @id @default(uuid())
+  userId          String
+  jobType         String
+  questions       Json
+  answers         Json
+  feedback        Json
+  overallScore    Float
+  improvements    Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model MarketTrend {
+  id              String   @id @default(uuid())
+  category        String   // skill, role, industry, salary
+  name            String
+  data            Json
+  forecast        Json
+  trend           String   // rising, stable, declining
+  confidence      Float
+  region          String?
+  recordedAt      DateTime @default(now())
+}
+
+model CareerGoal {
+  id              String   @id @default(uuid())
+  userId          String
+  title           String
+  targetDate      DateTime
+  milestones      Json
+  progress        Float    // 0-100
+  status          String   // active, achieved, abandoned
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

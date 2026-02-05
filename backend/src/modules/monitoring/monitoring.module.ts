@@ -1,16 +1,31 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { MonitoringService } from './monitoring.service';
 import { MonitoringController } from './monitoring.controller';
-import { Metric } from './entities/metric.entity';
-import { Alert } from './entities/alert.entity';
-import { CostControl } from './entities/cost-control.entity';
-import { LogEntry } from './entities/log-entry.entity';
+import { TracingService } from './services/tracing.service';
+import { MetricsService } from './services/metrics.service';
+import { AlertingService } from './services/alerting.service';
+import { SLOService } from './services/slo.service';
+import { RemediationService } from './services/remediation.service';
+import { LogService } from './services/log.service';
+import { PrismaModule } from '../../modules/prisma/prisma.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Metric, Alert, CostControl, LogEntry])],
-  providers: [MonitoringService],
+  imports: [PrismaModule],
   controllers: [MonitoringController],
-  exports: [MonitoringService],
+  providers: [
+    TracingService,
+    MetricsService,
+    AlertingService,
+    SLOService,
+    RemediationService,
+    LogService,
+  ],
+  exports: [
+    TracingService,
+    MetricsService,
+    AlertingService,
+    SLOService,
+    RemediationService,
+    LogService,
+  ],
 })
 export class MonitoringModule {}

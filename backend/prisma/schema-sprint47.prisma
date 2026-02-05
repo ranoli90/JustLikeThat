@@ -1,0 +1,265 @@
+// Sprint 47: Global Infrastructure Expansion
+// Prisma Schema for Multi-Region Deployment, Edge Computing, CDN, and Disaster Recovery
+
+model RegionConfig {
+  id              String   @id @default(uuid())
+  regionId        String   @unique
+  name            String
+  cloudProvider   String   // aws, gcp, azure
+  regionName      String   // us-east-1, etc.
+  endpoint        String
+  status          String   // active, standby, maintenance
+  priority        Int      @default(1)
+  isPrimary      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  health          RegionHealth[]
+  failoverEvents  FailoverEvent[]
+  databaseConnections GlobalDatabaseConnection[]
+}
+
+model RegionHealth {
+  id              String   @id @default(uuid())
+  regionId        String
+  latency         Float    // milliseconds
+  errorRate       Float
+  throughput      Float
+  cpuUsage        Float
+  memoryUsage     Float
+  diskUsage       Float
+  recordedAt      DateTime @default(now())
+
+  region          RegionConfig @relation(fields: [regionId], references: [regionId])
+}
+
+model EdgeLocation {
+  id              String   @id @default(uuid())
+  locationId      String   @unique
+  provider        String   // cloudflare, fastly, aws
+  region          String
+  city            String
+  country         String
+  latitude        Float
+  longitude       Float
+  isActive       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+}
+
+model EdgeFunction {
+  id              String   @id @default(uuid())
+  functionId      String   @unique
+  name            String
+  provider        String   // cloudflare, aws, gcp
+  code            String   @db.Text
+  runtime         String   // nodejs, python, etc.
+  memory          Int      // MB
+  timeout         Int      // seconds
+  environment     Json     // Environment variables
+  routes          String[]
+  version         Int      @default(1)
+  status          String   // deployed, testing, failed
+  lastDeployedAt  DateTime @default(now())
+  createdAt       DateTime @default(now())
+}
+
+model CDNConfiguration {
+  id              String   @id @default(uuid())
+  configId        String   @unique
+  name            String
+  provider        String   // cloudfront, fastly, cloudflare
+  domains         String[]
+  originUrl       String
+  sslCertificate   String
+  cachePolicy     Json     // TTL settings, headers
+  optimization    Json     // Image optimization, compression
+  rules           Json     // Custom CDN rules
+  status          String
+  createdAt       DateTime @default(now())
+}
+
+model CDNAnalytics {
+  id              String   @id @default(uuid())
+  configId        String
+  timestamp       DateTime @default(now())
+  requests        BigInt
+  cacheHits       BigInt
+  cacheMisses     BigInt
+  bandwidth       BigInt   // bytes
+  latencyP50      Float    // milliseconds
+  latencyP95      Float
+  latencyP99      Float
+  status          String
+}
+
+model DataResidencyRule {
+  id              String   @id @default(uuid())
+  ruleId          String   @unique
+  tenantId        String?
+  region          String   // eu, us, apac, uk, canada
+  dataType        String   // user_data, application_data, analytics_data
+  storageRegions  String[]
+  isRequired     Boolean  @default(true)
+  retentionDays   Int
+  encryptionKey   String?  // Optional encryption key reference
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  auditLogs       DataResidencyAudit[]
+}
+
+model DataResidencyAudit {
+  id              String   @id @default(uuid())
+  ruleId          String
+  operation       String   // read, write, delete, transfer
+  sourceRegion    String
+  targetRegion    String?
+  dataType        String
+  recordId        String?
+  tenantId        String?
+  ipAddress       String
+  userId          String?
+  timestamp       DateTime @default(now())
+  compliance      Boolean  // Whether operation was compliant
+  notes           String?
+
+  rule            DataResidencyRule @relation(fields: [ruleId], references: [ruleId])
+}
+
+model GlobalDatabase {
+  id              String   @id @default(uuid())
+  databaseId      String   @unique
+  name            String
+  type            String   // cockroachdb, spanner, dynamodb, citus, postgresql
+  provider        String   // aws, gcp, azure, self-hosted
+  regions         String[]
+  status          String
+  connectionPool  Int
+  readReplicas    Int
+  writeLatency    Float
+  readLatency     Float
+  replicationLag  Float
+  consistency     String   // strong, eventual, bounded_staleness
+  encryption      String   // Encryption at rest
+  backupRetention Int      // Days
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  connections     GlobalDatabaseConnection[]
+  backups         BackupRecord[]
+}
+
+model GlobalDatabaseConnection {
+  id              String   @id @default(uuid())
+  databaseId      String
+  regionId        String
+  endpoint        String
+  port            Int
+  isReadReplica   Boolean  @default(false)
+  isWriteEndpoint Boolean  @default(false)
+  status          String
+  latency         Float
+  lastChecked     DateTime @default(now())
+
+  database        GlobalDatabase @relation(fields: [databaseId], references: [databaseId])
+  region          RegionConfig   @relation(fields: [regionId], references: [regionId])
+}
+
+model DisasterRecoveryPlan {
+  id              String   @id @default(uuid())
+  planId          String   @unique
+  tenantId        String?
+  name            String
+  rtoMinutes     Int      // Recovery Time Objective
+  rpoMinutes     Int      // Recovery Point Objective
+  plan            Json     // Step-by-step recovery plan
+  testSchedule    String   // monthly, quarterly, manual
+  lastTest       DateTime?
+  nextTest       DateTime?
+  lastUpdated    DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  tests           DRTestRecord[]
+  failoverEvents  FailoverEvent[]
+}
+
+model DRTestRecord {
+  id              String   @id @default(uuid())
+  planId          String
+  testType        String   // full, partial, simulation
+  status          String   // passed, failed, partial
+  startedAt       DateTime
+  completedAt     DateTime?
+  rtoAchieved     Boolean
+  rpoAchieved     Boolean
+  findings        Json     // Issues found, recommendations
+  executedBy      String
+
+  plan            DisasterRecoveryPlan @relation(fields: [planId], references: [planId])
+}
+
+model FailoverEvent {
+  id              String   @id @default(uuid())
+  eventId         String   @unique
+  planId          String?
+  regionId        String
+  eventType       String   // planned, unplanned
+  status          String   // initiated, in_progress, completed, failed
+  triggerReason   String
+  description     String?
+  startedAt       DateTime
+  completedAt     DateTime?
+  affectedUsers   Int
+  dataLoss       Int      // seconds
+  rollbackPerformed Boolean @default(false)
+
+  plan            DisasterRecoveryPlan? @relation(fields: [planId], references: [planId])
+  region          RegionConfig         @relation(fields: [regionId], references: [regionId])
+}
+
+model BackupRecord {
+  id              String   @id @default(uuid())
+  backupId        String   @unique
+  databaseId      String
+  backupType      String   // full, incremental, differential
+  storageProvider String   // aws-s3, gcp-cloudstorage, azure-blob
+  storageLocation String
+  sizeBytes      BigInt
+  status          String   // in_progress, completed, failed, verified
+  startedAt       DateTime
+  completedAt     DateTime?
+  retentionUntil  DateTime?
+  checksum        String   // SHA-256 checksum for verification
+  encrypted       Boolean  @default(true)
+  metadata        Json     // Additional backup metadata
+
+  database        GlobalDatabase @relation(fields: [databaseId], references: [databaseId])
+}
+
+model GlobalLoadBalancer {
+  id              String   @id @default(uuid())
+  lbId            String   @unique
+  name            String
+  provider        String   // cloudflare, aws, gcp, azure
+  configuration  Json     // Load balancer rules, routing policies
+  healthCheckPath String
+  healthCheckPort Int      @default(80)
+  sslCertificate  String
+  domains         String[]
+  ipAddresses     String[] // Assigned IP addresses
+  status          String   // active, inactive, degraded
+  geoRouting      Json     // Geographic routing rules
+  failoverTarget  String?  // Failover target URL
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model GlobalMetrics {
+  id              String   @id @default(uuid())
+  timestamp       DateTime @default(now())
+  metricType      String   // latency, throughput, error_rate, availability
+  region          String?
+  provider        String?
+  value           Float
+  unit            String
+  tags            Json     // Additional tags for filtering
+}

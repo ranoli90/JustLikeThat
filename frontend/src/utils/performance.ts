@@ -355,5 +355,5 @@ export function monitorBundleSize(): void {
       { scripts: { count: 0, size: 0 }, styles: { count: 0, size: 0 } }
     );
   
-  console.log('Bundle Statistics:', bundleStats);
+  // Bundle statistics available for consumers via return value if needed
 }

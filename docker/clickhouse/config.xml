@@ -1,0 +1,69 @@
+<clickhouse>
+    <listen_host>0.0.0.0</listen_host>
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <max_connections>10000</max_connections>
+    <max_thread_pool_size>1000</max_thread_pool_size>
+    <keep_alive_timeout>300</keep_alive_timeout>
+    
+    <default_profile>default</default_profile>
+    <users>
+        <admin>
+            <password>clickhouse_admin_123</password>
+            <networks>
+                <ip>::/0</ip>
+            </networks>
+            <profile>default</profile>
+            <quota>default</quota>
+        </admin>
+    </users>
+    
+    <profiles>
+        <default>
+            <max_execution_time>60</max_execution_time>
+            <max_memory_usage>10000000000</max_memory_usage>
+            <max_query_size>262144</max_query_size>
+            <max_ast_elements>100000</max_ast_elements>
+            <readonly>0</readonly>
+        </default>
+    </profiles>
+    
+    <quotas>
+        <default>
+            <interval>
+                <duration>3600</duration>
+                <queries>0</queries>
+                <errors>0</errors>
+                <result_rows>0</result_rows>
+                <read_rows>0</read_rows>
+                <execution_time>0</execution_time>
+            </interval>
+        </default>
+    </quotas>
+    
+    <databases>
+        <database name="analytics">
+            <engine>Atomic</engine>
+        </database>
+    </databases>
+    
+    <dictionaries_lazy_load>true</dictionaries_lazy_load>
+    
+    <compression>
+        <case>
+            <method>lz4</method>
+        </case>
+    </compression>
+    
+    <distributed_ddl>
+        <path>/clickhouse/task_queue/ddl</path>
+    </distributed_ddl>
+    
+    <mark_cache_size>5368709120</mark_cache_size>
+    <uncompressed_cache_size>8589934592</uncompressed_cache_size>
+    
+    <merge_tree>
+        <max_suspicious_broken_parts>5</max_suspicious_broken_parts>
+        <max_partitions_per_delete_block>1000</max_partitions_per_delete_block>
+    </merge_tree>
+</clickhouse>

@@ -1,0 +1,105 @@
+# Kubernetes Namespace Configuration
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: simpleasthat
+  labels:
+    name: simpleasthat
+    environment: production
+    managed-by: terraform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring
+    environment: production
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-system
+  labels:
+    name: kube-system
+---
+# ResourceQuota for the main namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: compute-quota
+  namespace: simpleasthat
+spec:
+  hard:
+    cpu: "500"
+    memory: 1Ti
+    pods: "500"
+    services: "100"
+    replicationcontrollers: "50"
+    secrets: "200"
+    persistentvolumeclaims: "100"
+---
+# LimitRange for default resource limits
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: default-limits
+  namespace: simpleasthat
+spec:
+  limits:
+    - default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 200m
+        memory: 256Mi
+      type: Container
+---
+# NetworkPolicy - deny all by default
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: simpleasthat
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# NetworkPolicy - allow traffic within namespace
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: simpleasthat
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+# NetworkPolicy - allow egress to necessary services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: simpleasthat
+spec:
+  podSelector: {}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

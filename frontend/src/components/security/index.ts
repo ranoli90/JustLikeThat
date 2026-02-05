@@ -5,3 +5,8 @@ export { MfaPanel } from './MfaPanel';
 export { CompliancePanel } from './CompliancePanel';
 export { ConsentPanel } from './ConsentPanel';
 export { VulnerabilityPanel } from './VulnerabilityPanel';
+export { AuditLogViewer } from './AuditLogViewer';
+export { IncidentDashboard } from './IncidentDashboard';
+export { ComplianceDashboard } from './ComplianceDashboard';
+export { DSARManager } from './DSARManager';
+export { VulnerabilityScanner } from './VulnerabilityScanner';

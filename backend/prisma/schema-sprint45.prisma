@@ -1,0 +1,728 @@
+// Sprint 45: Enterprise Analytics & Reporting Schema
+// Apply-as-a-Service Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================
+// Executive Dashboards
+// =====================
+
+model DashboardConfig {
+  id              String   @id @default(uuid())
+  userId          String
+  tenantId        String
+  name            String
+  description     String?
+  layout          Json     // Widget positions and sizes
+  widgets         Json     // Widget configurations
+  isDefault       Boolean  @default(false)
+  isPublic        Boolean  @default(false)
+  refreshInterval Int      @default(30) // seconds
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([userId])
+}
+
+model DashboardWidget {
+  id              String   @id @default(uuid())
+  dashboardId     String
+  widgetType      String   // kpi, chart, table, map, gauge
+  title           String
+  config          Json     // Widget-specific configuration
+  position        Json     // x, y, width, height
+  dataSource      Json     // Query configuration
+  refreshEnabled  Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([dashboardId])
+}
+
+model WidgetTemplate {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  category        String   // recruitment, finance, workforce, performance
+  widgetType      String
+  defaultConfig   Json
+  previewImage    String?
+  isSystem        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// =====================
+// Advanced Reporting Engine
+// =====================
+
+model ReportDefinition {
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  description     String?
+  reportType      String   // standard, ad_hoc, scheduled, template
+  query           Json      // Data query configuration
+  visualization   Json      // Chart/table configuration
+  filters         Json?     // Available filters
+  parameters      Json?     // User-defined parameters
+  columns         Json?     // Selected columns
+  sorting         Json?     // Sort configuration
+  grouping        Json?     // Group configuration
+  formulas        Json?     // Custom formulas
+  createdBy       String
+  isTemplate      Boolean  @default(false)
+  isPublic        Boolean  @default(false)
+  version         Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([createdBy])
+}
+
+model ReportTemplate {
+  id              String   @id @default(uuid())
+  tenantId        String?
+  name            String
+  description     String?
+  category        String   // recruitment, finance, workforce, compliance, custom
+  reportDef       Json     // Full report definition
+  thumbnail       String?
+  isSystem        Boolean  @default(false)
+  usageCount      Int      @default(0)
+  tags            String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ScheduledReport {
+  id              String   @id @default(uuid())
+  reportId        String
+  tenantId        String
+  frequency       String   // daily, weekly, monthly, quarterly, yearly
+  dayOfWeek       Int?     // 0-6 for weekly
+  dayOfMonth      Int?     // 1-31 for monthly
+  hour            Int      @default(9)
+  minute          Int      @default(0)
+  timezone        String   @default("UTC")
+  recipients      String[] // Email addresses
+  format          String   // pdf, excel, csv, png
+  compression     Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  lastRun         DateTime?
+  nextRun         DateTime?
+  lastStatus      String?  // success, failed, partial
+  errorMessage    String?
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model ReportExport {
+  id              String   @id @default(uuid())
+  reportId        String
+  tenantId        String
+  userId          String
+  format          String
+  status          String   // processing, completed, failed, expired
+  fileUrl         String?
+  fileSize        Int?
+  expiresAt       DateTime?
+  parameters      Json?    // Report parameters used
+  generatedAt     DateTime?
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([reportId])
+  @@index([status])
+}
+
+model ReportExecutionLog {
+  id              String   @id @default(uuid())
+  reportId        String
+  tenantId        String
+  userId          String
+  executionTime   Int      // milliseconds
+  rowCount        Int
+  status          String   // success, failed, timeout
+  errorMessage    String?
+  queryUsed       Json?
+  createdAt       DateTime @default(now())
+
+  @@index([reportId])
+  @@index([createdAt])
+}
+
+// =====================
+// Predictive Workforce Analytics
+// =====================
+
+model WorkforcePrediction {
+  id              String   @id @default(uuid())
+  tenantId        String
+  predictionType  String   // attrition, talent_gap, skills_demand, retention, performance
+  modelVersion    String
+  predictionDate  DateTime
+  forecastPeriod  String   // 3m, 6m, 1y, 3y, 5y
+  prediction      Json     // Prediction results
+  confidence      Float    // 0-1 confidence score
+  factors         Json     // Contributing factors with weights
+  riskScore       Float?   // Overall risk score
+  recommendations Json?   // Suggested actions
+  segment         String?  // department, role, location
+  createdAt       DateTime @default(now())
+  validUntil      DateTime?
+
+  @@index([tenantId])
+  @@index([predictionType])
+  @@index([forecastPeriod])
+}
+
+model AttritionData {
+  id              String   @id @default(uuid())
+  tenantId        String
+  employeeId      String?
+  department      String
+  role            String
+  tenure          Int       // months
+  attritionType   String   // voluntary, involuntary
+  reason          String?
+  lastWorkingDate DateTime
+  exitInterview   Json?
+  replacementTime Int?     // days
+  replacementCost Float?
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([department])
+  @@index([attritionType])
+}
+
+model SkillsGap {
+  id              String   @id @default(uuid())
+  tenantId        String
+  department      String
+  role            String
+  skillName       String
+  currentLevel    String   // beginner, intermediate, advanced, expert
+  requiredLevel   String
+  gapLevel        String
+  priority        Int      @default(1)
+  developmentPlan Json?
+  trainingCost    Float?
+  timelineMonths  Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([department])
+}
+
+model TalentForecast {
+  id              String   @id @default(uuid())
+  tenantId        String
+  department      String
+  role            String
+  forecastPeriod  String   // quarterly, yearly
+  currentHeadcount Int
+  projectedHeadcount Int
+  attritionRate   Float
+  hiringRate      Float
+  internalMoves   Int
+  externalHires   Int
+  budgetedPositions Int
+  confidence      Float
+  assumptions     Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([forecastPeriod])
+}
+
+model DiversityMetrics {
+  id              String   @id @default(uuid())
+  tenantId        String
+  period          String   // monthly, quarterly
+  startDate       DateTime
+  endDate         DateTime
+  category        String   // gender, ethnicity, age, disability, veteran
+  breakdown       Json     // { "category": { "count": 0, "percentage": 0 } }
+  trend           Json?    // Historical trend data
+  benchmark       Json?    // Industry benchmark
+  goals           Json?    // Diversity goals
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([period])
+}
+
+// =====================
+// Talent Acquisition Analytics
+// =====================
+
+model TalentMetrics {
+  id              String   @id @default(uuid())
+  tenantId        String
+  period          String   // daily, weekly, monthly, quarterly
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Pipeline metrics
+  totalApplications Int     @default(0)
+  totalCandidates   Int     @default(0)
+  activeJobs        Int     @default(0)
+  openPositions     Int     @default(0)
+  
+  // Source metrics
+  sourceBreakdown  Json?   // { "source": { "count": 0, "cost": 0, "conversion": 0 } }
+  topSources       Json?   // Top 10 sources by performance
+  
+  // Time metrics
+  avgTimeToFill    Float?  // days
+  avgTimeToHire    Float?  // days
+  stageDurations   Json?   // Duration at each stage
+  
+  // Quality metrics
+  qualityScore     Float?  // Overall quality score
+  offerAcceptRate  Float?
+  offerDeclineRate Float?
+  newHireTurnover  Float?
+  
+  // Recruiter metrics
+  recruiterPerformance Json? // Performance by recruiter
+  
+  // Benchmark data
+  benchmark        Json?   // Industry benchmarks
+  percentile       Json?   // Percentile rankings
+  
+  createdAt        DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([period])
+  @@index([startDate])
+}
+
+model SourceEffectiveness {
+  id              String   @id @default(uuid())
+  tenantId        String
+  sourceId        String
+  sourceName      String
+  sourceType      String   // job_board, referral, social, direct, agency, internal
+  period          String
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Volume metrics
+  applications    Int      @default(0)
+  screenings      Int      @default(0)
+  interviews      Int      @default(0)
+  offers          Int      @default(0)
+  hires           Int      @default(0)
+  
+  // Conversion rates
+  appToScreening  Float    @default(0)
+  screeningToInterview Float @default(0)
+  interviewToOffer Float   @default(0)
+  offerToHire    Float    @default(0)
+  overallConversion Float @default(0)
+  
+  // Cost metrics
+  totalCost       Float    @default(0)
+  costPerApplication Float  @default(0)
+  costPerHire     Float    @default(0)
+  
+  // Quality metrics
+  avgQualityScore Float?
+  avgTenure       Float?   // months
+  performanceScore Float?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([sourceId])
+  @@index([period])
+}
+
+model RecruiterPerformance {
+  id              String   @id @default(uuid())
+  tenantId        String
+  recruiterId     String
+  period          String
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Volume
+  positionsFilled  Int     @default(0)
+  offersMade       Int     @default(0)
+  offersAccepted   Int     @default(0)
+  offersDeclined   Int     @default(0)
+  
+  // Time metrics
+  avgTimeToFill   Float?  // days
+  avgTimeToHire   Float?  // days
+  
+  // Quality metrics
+  avgQualityScore Float?
+  newHireRetention Float?  // 90-day, 1-year
+  
+  // Candidate experience
+  candidateRating Float?
+  feedbackScore   Float?
+  
+  // Efficiency
+  avgOffersPerCandidate Float?
+  pipelineConversion Float?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([recruiterId])
+  @@index([period])
+}
+
+model PipelineHealth {
+  id              String   @id @default(uuid())
+  tenantId        String
+  jobId           String?
+  department      String
+  asOfDate        DateTime
+  
+  // Pipeline counts by stage
+  stageBreakdown  Json     // { "stage": count }
+  totalCandidates Int
+  
+  // Health indicators
+  avgDaysInStage  Json?    // { "stage": avg_days }
+  bottleneckStage String?
+  staleCandidates Int     @default(0) // >30 days inactive
+  
+  // Velocity metrics
+  avgPipelineTime Float?   // days
+  projectedCompletions Int @default(0)
+  
+  // Quality indicators
+  qualifiedRatio  Float?   // Percentage in late stages
+  diversityRatio   Json?   // Diversity by stage
+  
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([asOfDate])
+}
+
+// =====================
+// Time-to-Hire Optimization
+// =====================
+
+model TimeToHireAnalysis {
+  id              String   @id @default(uuid())
+  tenantId        String
+  jobId           String?
+  period          String
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Overall metrics
+  avgTimeToHire   Float    // days
+  medianTimeToHire Float   // days
+  minTimeToHire   Int      // days
+  maxTimeToHire   Int      // days
+  
+  // By stage
+  stageDurations  Json     // { "stage": { "avg": 0, "median": 0, "min": 0, "max": 0 } }
+  
+  // By role category
+  roleBreakdown   Json?   // { "category": avg_days }
+  
+  // By department
+  departmentBreakdown Json? // { "department": avg_days }
+  
+  // Trends
+  trendData       Json?   // Historical trend
+  comparisonData  Json?   // vs previous period
+  
+  // Benchmarks
+  benchmark       Json?   // Industry benchmark
+  percentile      Float?  // Percentile ranking
+  
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([period])
+}
+
+model Bottleneck {
+  id              String   @id @default(uuid())
+  tenantId        String
+  jobId           String?
+  department      String
+  stage           String   // Application, Screening, Interview, Offer, etc.
+  
+  // Identification
+  bottleneckType  String   // duration, volume, resource, process
+  severity        String   // low, medium, high, critical
+  
+  // Metrics
+  avgDuration     Float    // days
+  avgWaitTime     Float    // days
+  candidateBacklog Int     @default(0)
+  
+  // Impact
+  estimatedImpact Json?   // { "timeLost": 0, "costImpact": 0, "candidateLoss": 0 }
+  
+  // Recommendations
+  recommendations Json?   // Suggested improvements
+  
+  // Resolution
+  status          String   @default("identified") // identified, investigating, implementing, resolved
+  resolvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model StageOptimization {
+  id              String   @id @default(uuid())
+  tenantId        String
+  stage           String
+  currentAvgDuration Float
+  targetDuration  Float
+  optimizationType String  // automation, process, resource, technology
+  
+  // Details
+  description     String?
+  expectedImpact  Json?   // { "timeReduction": 0, "costSavings": 0 }
+  
+  // Implementation
+  implementation  Json?   // Steps and requirements
+  timeline         String? // Implementation timeline
+  status          String   @default("proposed") // proposed, planned, implementing, completed
+  
+  // Validation
+  beforeMetrics   Json?
+  afterMetrics    Json?
+  improvement     Float?   // Percentage improvement
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([stage])
+}
+
+model OptimizationRecommendation {
+  id              String   @id @default(uuid())
+  tenantId        String
+  recommendationType String // process, automation, sourcing, screening, interviewing
+  
+  // Content
+  title           String
+  description     String
+  rationale       String
+  
+  // Impact
+  timeSavings     Json?   // { "value": 0, "unit": "days" }
+  costSavings     Json?   // { "value": 0, "currency": "USD" }
+  qualityImpact   Json?   // { "impact": "positive/negative", "details": "" }
+  
+  // Implementation
+  effort          String   // low, medium, high
+  priority        Int      @default(1)
+  prerequisites   String[]
+  steps           Json?    // Implementation steps
+  
+  // Validation
+  status          String   @default("suggested") // suggested, approved, implemented, rejected
+  results         Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([priority])
+}
+
+// =====================
+// Cost-per-Hire Tracking
+// =====================
+
+model CostTracking {
+  id              String   @id @default(uuid())
+  tenantId        String
+  hireId          String?  // Associated hire (if completed)
+  jobId           String?
+  department      String?
+  category        String   // job_board, referral, agency, internal, advertising, events, technology, other
+  
+  // Cost details
+  amount          Float
+  currency        String   @default("USD")
+  exchangeRate    Float    @default(1)
+  convertedAmount Float?   // In base currency
+  
+  // Description
+  description      String?
+  vendor           String?
+  receipt          String?  // URL to receipt/document
+  invoiceNumber   String?
+  
+  // Allocation
+  allocatedTo      String?  // Job or department
+  costCenter      String?
+  
+  // Recurring
+  isRecurring     Boolean  @default(false)
+  recurringFrequency String?
+  
+  // Status
+  status          String   @default("pending") // pending, approved, paid, reimbursed
+  approvedBy      String?
+  approvedAt      DateTime?
+  
+  // Analytics
+  costPerHire     Float?   // Calculated cost per hire (when hire completes)
+  roi             Float?   // Calculated ROI
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([hireId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model CostBudget {
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  period          String   // monthly, quarterly, yearly
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Budget amounts
+  totalBudget     Float
+  spentAmount     Float    @default(0)
+  remainingAmount Float?   // Computed
+  
+  // Category breakdown
+  categories      Json     // { "category": { "budget": 0, "spent": 0 } }
+  
+  // Department breakdown
+  departments     Json?    // { "department": { "budget": 0, "spent": 0 } }
+  
+  // Variance
+  varianceThreshold Float  @default(10) // Alert threshold percentage
+  alerts          Json?    // { "category": { "percentage": 0, "alerted": false } }
+  
+  // Status
+  status          String   @default("active") // draft, active, closed
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([period])
+}
+
+model CostForecast {
+  id              String   @id @default(uuid())
+  tenantId        String
+  period          String   // monthly, quarterly, yearly
+  startDate       DateTime
+  endDate         DateTime
+  
+  // Forecast details
+  projectedSpend  Float
+  confidence      Float    // 0-1 confidence score
+  
+  // Breakdown
+  byCategory      Json?    // { "category": amount }
+  byDepartment    Json?    // { "department": amount }
+  
+  // Assumptions
+  assumptions     Json?
+  attritionRate   Float?
+  hiringRate      Float?
+  
+  // Comparison
+  vsBudget        Float?   // Variance from budget
+  vsActual        Float?   // Variance from actuals (for historical)
+  
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([period])
+}
+
+model CostROI {
+  id              String   @id @default(uuid())
+  tenantId        String
+  hireId          String
+  period          String
+  calculationDate DateTime
+  
+  // Costs
+  totalCost       Float
+  perHireCost     Float
+  
+  // Value metrics
+  hireValue       Float?   // Estimated value of hire
+  performanceScore Float?  // Performance rating
+  tenureMonths    Int?     // Actual tenure
+  
+  // ROI calculation
+  roi             Float?   // Return on investment
+  paybackPeriod   Float?   // Months to payback
+  
+  // Comparisons
+  vsBudget        Float?   // % over/under budget
+  vsAverage       Float?   // % over/under average
+  
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([hireId])
+}
+
+model CostVariance {
+  id              String   @id @default(uuid())
+  tenantId        String
+  budgetId        String
+  period          String
+  category        String
+  
+  // Variance details
+  budgetedAmount  Float
+  actualAmount    Float
+  variance        Float    // actual - budgeted
+  variancePercent Float
+  
+  // Analysis
+  varianceType    String   // favorable, unfavorable
+  reason          String?
+  contributingFactors Json?
+  
+  createdAt       DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([budgetId])
+}

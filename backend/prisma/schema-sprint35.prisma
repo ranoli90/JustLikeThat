@@ -1,0 +1,689 @@
+// ============ INTERNATIONALIZATION (Sprint 35) ============
+
+model Locale {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  nativeName      String
+  direction       String   @default("ltr")
+  isActive        Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  fallbackLocale  String?
+  
+  // Regional settings
+  languageCode    String
+  territoryCode   String?
+  scriptCode      String?
+  
+  // Metadata
+  currency        String?
+  timezone        String?
+  dateFormat      String?
+  timeFormat      String?
+  numberFormat    Json?
+  pluralRules     String?
+  
+  // Translation stats
+  translationCount Int    @default(0)
+  coveragePercent  Float  @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  translations    Translation[]
+  translationWorkflows TranslationWorkflow[]
+}
+
+model Translation {
+  id              String   @id @default(uuid())
+  localeId        String
+  namespace       String
+  key             String
+  
+  // Translation content
+  value           String
+  valueHtml       String?
+  isPlural        Boolean  @default(false)
+  pluralIndex     Int?
+  pluralValues    Json?
+  
+  // Metadata
+  translatedAt    DateTime @default(now())
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  approvedBy      String?
+  approvedAt      DateTime?
+  
+  // Source info
+  sourceLocale    String?
+  sourceValue     String?
+  machineTranslated Boolean @default(false)
+  translationMemoryMatch Float?
+  
+  // Usage stats
+  usageCount      Int      @default(0)
+  lastUsedAt      DateTime?
+  
+  // Tenant-specific overrides
+  tenantId        String?
+  
+  // Status
+  status          TranslationStatus @default(DRAFT)
+  comment         String?
+  
+  locale          Locale   @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  
+  @@unique([localeId, namespace, key])
+  @@index([localeId, namespace])
+  @@index([status])
+}
+
+enum TranslationStatus {
+  DRAFT
+  PENDING_REVIEW
+  REVIEWED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+model TranslationWorkflow {
+  id              String   @id @default(uuid())
+  localeId        String
+  namespace       String
+  
+  // Workflow stages
+  stage           WorkflowStage @default(DRAFT)
+  stageData       Json?
+  
+  // Assignments
+  assignedTo      String?
+  reviewerId      String?
+  approverId      String?
+  
+  // Priority and deadlines
+  priority        Int      @default(0)
+  dueAt           DateTime?
+  completedAt     DateTime?
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  locale          Locale   @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  
+  @@index([localeId, stage])
+  @@index([assignedTo])
+}
+
+enum WorkflowStage {
+  DRAFT
+  TRANSLATION
+  REVIEW
+  APPROVAL
+  PUBLISH
+}
+
+model TranslationMemory {
+  id              String   @id @default(uuid())
+  
+  // Source segment
+  sourceLocale    String
+  sourceText     String
+  
+  // Target segment
+  targetLocale    String
+  targetText     String
+  
+  // Metadata
+  namespace       String?
+  context         String?
+  usageCount      Int      @default(0)
+  
+  // Quality metrics
+  matchType       MatchType
+  qualityScore    Float    @default(1.0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([sourceLocale, targetLocale])
+  @@index([sourceText(255)])
+}
+
+enum MatchType {
+  EXACT
+  FUZZY
+  PARTIAL
+  MACHINE_ONLY
+}
+
+model Glossary {
+  id              String   @id @default(uuid())
+  
+  // Term info
+  term            String
+  definition      String
+  description     String?
+  
+  // Localization
+  locale          String
+  translations    Json?
+  
+  // Metadata
+  partOfSpeech    String?
+  domain          String?
+  usageExamples   Json?
+  
+  // Status
+  isApproved      Boolean  @default(false)
+  approvedBy      String?
+  
+  // Relations
+  parentId        String?
+  relatedTerms    String[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([term, locale])
+  @@index([locale])
+  @@index([domain])
+}
+
+model GlossaryEntry {
+  id              String   @id @default(uuid())
+  glossaryId      String
+  
+  // Term variations
+  term            String
+  abbreviation    String?
+  alternativeTerms String[]
+  
+  // Localization
+  locale          String
+  definition      String
+  notes           String?
+  
+  // Status
+  status          String   @default("PENDING")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([glossaryId, locale])
+}
+
+// ============ REGIONAL CONFIGURATIONS ============
+
+model RegionConfig {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  
+  // Geographic info
+  timezone        String
+  timezoneOffset  Float?
+  countries       String[]
+  
+  // Regional settings
+  defaultCurrency String
+  supportedCurrencies String[]
+  defaultLocale   String
+  supportedLocales String[]
+  
+  // Job market config
+  jobSources      Json
+  salaryData      Json
+  remoteWorkPolicy String?
+  
+  // Compliance
+  complianceRules Json
+  dataResidency   String?
+  gdprEnabled     Boolean  @default(false)
+  ccpaEnabled     Boolean  @default(false)
+  
+  // Pricing
+  basePrice       Float
+  pppMultiplier   Float    @default(1.0)
+  taxRate         Float    @default(0)
+  
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model JobSource {
+  id              String   @id @default(uuid())
+  regionCode      String
+  
+  // Source info
+  name            String
+  type            JobSourceType
+  baseUrl         String?
+  
+  // API config
+  apiEndpoint     String?
+  apiKey          String?
+  apiConfig       Json?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  lastSyncAt      DateTime?
+  syncStatus      SyncStatus @default(IDLE)
+  
+  // Metrics
+  totalJobs       Int      @default(0)
+  lastJobCount    Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode, isActive])
+}
+
+enum JobSourceType {
+  API
+  RSS
+  SCRAPER
+  PARTNER
+  AGGREGATOR
+}
+
+enum SyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+model RegionalSalary {
+  id              String   @id @default(uuid())
+  
+  // Job info
+  jobTitle        String
+  jobCategory     String?
+  experienceLevel String?
+  skills          String[]
+  
+  // Location
+  regionCode      String
+  countryCode     String?
+  city            String?
+  isRemote        Boolean  @default(false)
+  
+  // Salary data
+  currency        String
+  minSalary       Float
+  maxSalary       Float
+  medianSalary    Float?
+  averageSalary   Float?
+  
+  // Metadata
+  source          String
+  sampleSize      Int?
+  confidence      Float?
+  
+  // Timeframe
+  dataDate        DateTime
+  validUntil      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([regionCode, jobTitle])
+  @@index([countryCode])
+}
+
+model CurrencyRate {
+  id              String   @id @default(uuid())
+  
+  // Currency pair
+  fromCurrency    String
+  toCurrency      String
+  
+  // Rate data
+  rate            Float
+  inverseRate     Float?
+  
+  // Source
+  source          String
+  sourceUrl       String?
+  
+  // Timestamps
+  updatedAt       DateTime @default(now())
+  fetchedAt       DateTime @default(now())
+  
+  // Metadata
+  bid             Float?
+  ask             Float?
+  spread          Float?
+  
+  @@unique([fromCurrency, toCurrency])
+  @@index([fromCurrency])
+  @@index([updatedAt])
+}
+
+model PurchasingPowerParity {
+  id              String   @id @default(uuid())
+  
+  // Country/Region
+  countryCode     String
+  currency        String
+  
+  // PPP data
+  pppFactor       Float
+  gdpPerCapita    Float?
+  conversionRate  Float?
+  
+  // Year of data
+  year            Int
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([countryCode, year])
+}
+
+model TaxRate {
+  id              String   @id @default(uuid())
+  
+  // Tax info
+  regionCode      String
+  countryCode     String?
+  stateCode       String?
+  
+  // Tax rates
+  vatRate         Float?
+  salesTaxRate    Float?
+  incomeTaxRate   Float?
+  corporateTaxRate Float?
+  
+  // Tax brackets (JSON)
+  taxBrackets     Json?
+  
+  // Rules
+  rules           Json?
+  
+  effectiveFrom   DateTime
+  effectiveTo    DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode])
+}
+
+// ============ COMPLIANCE ============
+
+model ComplianceRequirement {
+  id              String   @id @default(uuid())
+  
+  // Regulation info
+  regionCode      String
+  regulation      String
+  regulationType  ComplianceType
+  
+  // Requirements
+  requirements    Json
+  dataRetention   Json?
+  consentRequired Boolean  @default(false)
+  
+  // Penalties
+  penalties       String?
+  fineAmount      Float?
+  fineCurrency    String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  
+  // Metadata
+  version         String?
+  sourceUrl       String?
+  lastReviewedAt  DateTime?
+  reviewedBy      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode, regulation])
+}
+
+enum ComplianceType {
+  GDPR
+  CCPA
+  LGPD
+  PIPEDA
+  POPIA
+  HIPAA
+  SOC2
+  ISO27001
+  PCI_DSS
+  CUSTOM
+}
+
+model ConsentRecord {
+  id              String   @id @default(uuid())
+  
+  // User info
+  userId          String
+  tenantId        String
+  
+  // Consent info
+  consentType     String
+  regulation      String?
+  
+  // Consent details
+  consentGiven    Boolean
+  consentVersion  String?
+  consentMethod   String?
+  consentIp       String?
+  
+  // Legal basis
+  legalBasis      String?
+  purpose         String?
+  
+  // Timestamps
+  consentedAt     DateTime @default(now())
+  withdrawnAt     DateTime?
+  renewedAt       DateTime?
+  
+  // Metadata
+  userAgent       String?
+  source          String?
+  
+  @@index([userId, consentType])
+  @@index([tenantId])
+}
+
+model DataResidencyRule {
+  id              String   @id @default(uuid())
+  
+  // Rule info
+  regionCode      String
+  dataCategory    String
+  
+  // Residency requirements
+  allowedRegions  String[]
+  restrictedRegions String[]
+  primaryRegion   String?
+  fallbackRegion  String?
+  
+  // Processing rules
+  canProcess      String[]
+  cannotProcess   String[]
+  requiresEncryption Boolean @default(true)
+  
+  // Retention
+  retentionPeriod Int?     // days
+  retentionPolicy String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  priority        Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode, dataCategory])
+}
+
+model RegionalFeatureFlag {
+  id              String   @id @default(uuid())
+  
+  // Feature info
+  featureKey      String
+  featureName     String?
+  
+  // Regional settings
+  regionCode      String
+  isEnabled       Boolean  @default(true)
+  config          Json?
+  
+  // Schedule
+  enabledFrom     DateTime?
+  enabledTo       DateTime?
+  
+  // Targeting
+  userSegments    String[]
+  tenantTypes     String[]
+  
+  // Rollout
+  rolloutPercent  Int      @default(100)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([featureKey, regionCode])
+  @@index([regionCode])
+}
+
+// ============ CULTURAL ADAPTATION ============
+
+model CulturalNorm {
+  id              String   @id @default(uuid())
+  
+  // Target
+  localeCode      String
+  countryCode     String?
+  
+  // Date/Time formats
+  dateFormat      String
+  timeFormat      String
+  datetimeFormat  String?
+  firstDayOfWeek  Int      @default(1)
+  calendarType    String?
+  
+  // Number formats
+  decimalSeparator String  @default(".")
+  thousandsSeparator String?
+  numberFormat    Json?
+  currencyFormat  Json?
+  percentFormat   Json?
+  
+  // Address format
+  addressFormat   Json?
+  addressFields   Json?
+  
+  // Name format
+  nameFormat      Json?
+  nameOrder       String   @default("givenFamily")
+  
+  // Communication norms
+  greeting        String?
+  formalityLevel  String   @default("neutral")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([localeCode])
+}
+
+model TimezoneInfo {
+  id              String   @id @default(uuid())
+  
+  // Timezone
+  timezone        String   @unique
+  ianaCode        String   @unique
+  
+  // Location
+  countryCode     String
+  region          String?
+  city            String?
+  
+  // UTC offset
+  utcOffset       String
+  utcOffsetHours  Float
+  
+  // DST info
+  hasDST         Boolean  @default(false)
+  dstStart        String?
+  dstEnd          String?
+  dstOffset      String?
+  
+  // Display
+  shortName       String?
+  longName        String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([countryCode])
+}
+
+// ============ USER PREFERENCES ============
+
+model UserPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  
+  // Localization preferences
+  preferredLocale    String?
+  preferredCurrency  String?
+  preferredTimezone  String?
+  preferredDateFormat String?
+  
+  // RTL settings
+  forceRTL        Boolean  @default(false)
+  
+  // Regional settings
+  region          String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model TenantLocale {
+  id              String   @id @default(uuid())
+  tenantId        String
+  
+  // Locale settings
+  localeCode      String
+  isEnabled       Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  
+  // Tenant-specific overrides
+  customTranslations Json?
+  customFormats    Json?
+  
+  // Status
+  status          TenantLocaleStatus @default(ACTIVE)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([tenantId, localeCode])
+  @@index([tenantId])
+}
+
+enum TenantLocaleStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  MAINTENANCE
+}

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { userAPI, profileAPI } from '../../services/api';
+import { userAPI, profileAPI } from '../../services/user.service';
+import { User, UpdatePreferencesData, CandidateProfile, UpdateProfileData } from '../../services/user.service';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { TextArea } from '../../components/ui/TextArea';
@@ -10,38 +12,32 @@ import { Checkbox } from '../../components/ui/Checkbox';
 import { Select } from '../../components/ui/Select';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Alert } from '../../components/ui/Alert';
-import { User, UpdatePreferencesData, CandidateProfile, UpdateProfileData } from '../../models/profile';
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
-  const [userData, setUserData] = useState<User>({
-    id: 0,
-    email: '',
+  const [userData, setUserData] = useState<Partial<User>>({
     firstName: '',
     lastName: '',
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    email: '',
   });
   
-  const [preferences, setPreferences] = useState({
+  const [preferences, setPreferences] = useState<UpdatePreferencesData>({
     jobTitle: '',
     location: '',
     remoteWork: false,
     minSalary: 0,
     maxSalary: 0,
     jobType: '',
-    skills: [] as string[],
+    skills: [],
   });
   
-  const [candidateProfile, setCandidateProfile] = useState<CandidateProfile>({
-    id: 0,
-    userId: 0,
+  const [candidateProfile, setCandidateProfile] = useState<Partial<CandidateProfile>>({
     about: '',
     experience: '',
     education: '',
@@ -60,17 +56,38 @@ export default function ProfilePage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [userRes, preferencesRes, profileRes] = await Promise.all([
+        const [userRes, preferencesRes] = await Promise.all([
           userAPI.getProfile(),
           userAPI.getPreferences(),
-          profileAPI.getCandidateProfile(),
         ]);
         
+        // Try to get candidate profile, may not exist yet
+        let profileRes: CandidateProfile | null = null;
+        try {
+          profileRes = await profileAPI.getCandidateProfile();
+        } catch (e) {
+          // Profile doesn't exist yet, use defaults
+        }
+        
         setUserData(userRes);
-        setPreferences(preferencesRes);
-        setCandidateProfile(profileRes);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to fetch profile data');
+        setPreferences({
+          jobTitle: preferencesRes.jobTitle || '',
+          location: preferencesRes.location || '',
+          remoteWork: preferencesRes.remotePreference === 'remote',
+          minSalary: preferencesRes.minSalary || 0,
+          maxSalary: preferencesRes.maxSalary || 0,
+          jobType: preferencesRes.jobType || '',
+          skills: preferencesRes.skills || [],
+        });
+        setCandidateProfile(profileRes || {
+          about: '',
+          experience: '',
+          education: '',
+          skills: [],
+        });
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch profile data';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -85,10 +102,14 @@ export default function ProfilePage() {
       setError(null);
       setSuccess(null);
       
-      await userAPI.updateProfile(userData);
+      await userAPI.updateProfile({
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+      });
       setSuccess('Profile updated successfully');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -102,8 +123,9 @@ export default function ProfilePage() {
       
       await userAPI.updatePreferences(preferences);
       setSuccess('Preferences updated successfully');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update preferences');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update preferences';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -115,10 +137,16 @@ export default function ProfilePage() {
       setError(null);
       setSuccess(null);
       
-      await profileAPI.updateCandidateProfile(candidateProfile);
+      await profileAPI.updateCandidateProfile({
+        about: candidateProfile.about,
+        experience: candidateProfile.experience,
+        education: candidateProfile.education,
+        skills: candidateProfile.skills,
+      });
       setSuccess('Candidate profile updated successfully');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update candidate profile');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update candidate profile';
+      setError(errorMessage);
     } finally {
       setSaving(false);
     }

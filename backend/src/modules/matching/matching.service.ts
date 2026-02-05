@@ -22,19 +22,64 @@ export interface MatchResult {
   thresholdMet: boolean;
 }
 
+// Loose helper types for flexible incoming shapes
+// without forcing knowledge of full entity schemas here
+// while still avoiding `any` propagation.
+interface SalaryRangeLike {
+  min?: number | null;
+  max?: number | null;
+}
+
+type SkillLike = string | { name?: string | null } | null | undefined;
+
+// Default weights moved to a single config object for easier tuning.
+// Keep culture/constraints as 0 until properly implemented to avoid skewing scores.
+const DEFAULT_WEIGHTS = Object.freeze({
+  skills: 0.55,
+  experience: 0.2,
+  salary: 0.15,
+  location: 0.1,
+  culture: 0,
+  constraints: 0,
+});
+
+type WeightKeys = keyof typeof DEFAULT_WEIGHTS;
+
 @Injectable()
 export class MatchingService {
-  private readonly MIN_RELEVANCE_SCORE = 0.75;
-  private readonly MIN_SAMPLES_FOR_LEARNING = 5;
+  private readonly MIN_RELEVANCE_SCORE: number;
+  private readonly WEIGHTS: Readonly<Record<WeightKeys, number>>;
 
   constructor(
     @InjectRepository(Persona)
     private readonly personaRepository: Repository<Persona>,
     @InjectRepository(JobPosting)
     private readonly jobPostingRepository: Repository<JobPosting>,
-    @InjectRepository(UserPreferences)
-    private readonly userPreferencesRepository: Repository<UserPreferences>,
-  ) {}
+  ) {
+    // Allow override by env without introducing ConfigService dependency.
+    const envMin = parseFloat(process.env.MATCH_MIN_SCORE || '');
+    this.MIN_RELEVANCE_SCORE = Number.isFinite(envMin) ? envMin : 0.75;
+
+    this.WEIGHTS = DEFAULT_WEIGHTS;
+    this.assertValidWeights(this.WEIGHTS);
+  }
+
+  // Ensure weights are sane to avoid silent scoring bugs.
+  private assertValidWeights(weights: Record<WeightKeys, number>): void {
+    const sum = Object.values(weights).reduce((a, b) => a + b, 0);
+    // Allow small FP error
+    if (Math.abs(sum - 1) > 1e-6) {
+      // If off, normalize them to sum to 1.0 defensively.
+      const normalized = Object.fromEntries(
+        (Object.keys(weights) as WeightKeys[]).map(k => [k, weights[k] / sum]),
+      ) as Record<WeightKeys, number>;
+      // eslint-disable-next-line no-console
+      console.warn(
+        `MatchingService: weights did not sum to 1. Normalizing automatically. Original sum=${sum}`,
+      );
+      this.WEIGHTS = Object.freeze(normalized);
+    }
+  }
 
   async calculateMatchScore(
     personaId: string,
@@ -45,170 +90,335 @@ export class MatchingService {
         where: { id: personaId },
         relations: ['profile', 'profile.user', 'profile.user.preferences'],
       }),
-      this.jobPostingRepository.findOne({
-        where: { id: jobPostingId },
-      }),
+      this.jobPostingRepository.findOne({ where: { id: jobPostingId } }),
     ]);
 
-    if (!persona || !jobPosting) {
-      throw new NotFoundException('Persona or Job Posting not found');
+    if (!persona) {
+      throw new NotFoundException(`Persona not found: ${personaId}`);
+    }
+    if (!jobPosting) {
+      throw new NotFoundException(`Job Posting not found: ${jobPostingId}`);
     }
 
+    return this.calculateMatchScoreForEntities(persona, jobPosting);
+  }
+
+  // Internal path to avoid redundant DB queries when caller already has entities.
+  private calculateMatchScoreForEntities(
+    persona: Persona,
+    jobPosting: JobPosting,
+  ): MatchResult {
     const breakdown = this.calculateScoreBreakdown(persona, jobPosting);
     const overallScore = this.calculateOverallScore(breakdown);
 
     return {
-      jobPostingId,
-      personaId,
+      jobPostingId: String((jobPosting as any).id),
+      personaId: String((persona as any).id),
       overallScore,
       breakdown,
       thresholdMet: overallScore >= this.MIN_RELEVANCE_SCORE,
     };
   }
 
-  private calculateScoreBreakdown(persona: any, jobPosting: any): MatchScoreBreakdown {
-    const skillsScore = this.calculateSkillsMatch(persona.skills, jobPosting.skills);
-    const experienceScore = this.calculateExperienceMatch(persona.experienceLevel, jobPosting.experiences);
-    const salaryScore = this.calculateSalaryFit(persona.profile.user.preferences, jobPosting.salaryRange);
-    const locationScore = this.calculateLocationCompatibility(persona.profile.user.preferences, jobPosting.location, jobPosting.remotePreference);
-    const cultureScore = this.calculateCulturalFit(persona.profile.user.preferences, jobPosting);
+  private calculateScoreBreakdown(
+    persona: Persona,
+    jobPosting: JobPosting,
+  ): MatchScoreBreakdown {
+    const skillsScore = this.calculateSkillsMatch(
+      (persona as any)?.skills,
+      (jobPosting as any)?.skills,
+    );
+
+    // Attempt to extract a job experience representation from several likely fields.
+    const jobExperienceSource =
+      (jobPosting as any)?.experiences ??
+      (jobPosting as any)?.experienceLevel ??
+      (jobPosting as any)?.requirements ??
+      (jobPosting as any)?.description ??
+      (jobPosting as any)?.title ??
+      jobPosting;
+
+    const experienceScore = this.calculateExperienceMatch(
+      (persona as any)?.experienceLevel,
+      jobExperienceSource,
+    );
+
+    const salaryScore = this.calculateSalaryFit(
+      (persona as any)?.profile?.user?.preferences ?? null,
+      (jobPosting as any)?.salaryRange ?? null,
+    );
+
+    const locationScore = this.calculateLocationCompatibility(
+      (persona as any)?.profile?.user?.preferences ?? null,
+      ((jobPosting as any)?.location ?? '') as string,
+      (jobPosting as any)?.remotePreference,
+    );
+
+    const cultureScore = this.calculateCulturalFit(
+      (persona as any)?.profile?.user?.preferences ?? null,
+      jobPosting,
+    );
+
     const constraintsScore = this.calculateConstraintsCompliance(persona, jobPosting);
 
     return {
-      skills: skillsScore * 0.5,
-      experience: experienceScore * 0.15,
-      salary: salaryScore * 0.10,
-      location: locationScore * 0.10,
-      culture: cultureScore * 0.10,
-      constraints: constraintsScore * 0.05,
+      skills: skillsScore * this.WEIGHTS.skills,
+      experience: experienceScore * this.WEIGHTS.experience,
+      salary: salaryScore * this.WEIGHTS.salary,
+      location: locationScore * this.WEIGHTS.location,
+      culture: cultureScore * this.WEIGHTS.culture,
+      constraints: constraintsScore * this.WEIGHTS.constraints,
     };
   }
 
   private calculateOverallScore(breakdown: MatchScoreBreakdown): number {
-    return Object.values(breakdown).reduce((sum, score) => sum + score, 0);
+    // Clamp each component and sum for safety
+    const clamped = Object.values(breakdown).map(v => Math.max(0, Math.min(1, v)));
+    return clamped.reduce((sum, score) => sum + score, 0);
   }
 
-  private calculateSkillsMatch(personaSkills: any, jobSkills: any): number {
+  private normalizeSkill(skill: SkillLike): string | null {
+    if (typeof skill === 'string') return skill.trim().toLowerCase();
+    if (!skill) return null;
+    const name = (skill as any).name;
+    if (typeof name === 'string') return name.trim().toLowerCase();
+    return null;
+  }
+
+  private calculateSkillsMatch(
+    personaSkills: SkillLike[] | undefined,
+    jobSkills: SkillLike[] | undefined,
+  ): number {
     const personaSkillsArray = Array.isArray(personaSkills) ? personaSkills : [];
     const jobSkillsArray = Array.isArray(jobSkills) ? jobSkills : [];
 
-    if (jobSkillsArray.length === 0) return 1;
+    if (jobSkillsArray.length === 0) return 1; // If job lists no skills, treat as full match.
 
-    const matchedSkills = personaSkillsArray.filter(skill =>
-      jobSkillsArray.some(jobSkill => this.skillMatch(skill, jobSkill)),
+    const personaSet = new Set(
+      personaSkillsArray
+        .map(s => this.normalizeSkill(s))
+        .filter((s): s is string => !!s),
+    );
+    const jobSet = new Set(
+      jobSkillsArray
+        .map(s => this.normalizeSkill(s))
+        .filter((s): s is string => !!s),
     );
 
-    return matchedSkills.length / jobSkillsArray.length;
-  }
+    if (jobSet.size === 0) return 1;
 
-  private skillMatch(personaSkill: any, jobSkill: any): boolean {
-    const personaSkillStr = typeof personaSkill === 'string'
-      ? personaSkill.toLowerCase()
-      : (personaSkill.name || '').toLowerCase();
-    const jobSkillStr = typeof jobSkill === 'string'
-      ? jobSkill.toLowerCase()
-      : (jobSkill.name || '').toLowerCase();
+    let matched = 0;
+    for (const skill of jobSet) {
+      if (personaSet.has(skill)) matched += 1;
+    }
 
-    return personaSkillStr === jobSkillStr;
+    return matched / jobSet.size;
   }
 
   private calculateExperienceMatch(
-    personaLevel: ExperienceLevel,
-    jobExperience: any,
+    personaLevel: ExperienceLevel | null | undefined,
+    jobExperience: unknown,
   ): number {
-    const levelMap = {
+    const levelMap: Record<ExperienceLevel, number> = {
       [ExperienceLevel.JUNIOR]: 1,
       [ExperienceLevel.MID]: 2,
       [ExperienceLevel.SENIOR]: 3,
       [ExperienceLevel.LEAD]: 4,
-    };
+    } as const;
 
-    const personaLevelValue = levelMap[personaLevel];
+    const personaLevelValue =
+      (personaLevel != null && (levelMap as any)[personaLevel]) || 2; // default neutral MID
+
     const jobRequiredLevel = this.extractJobExperienceLevel(jobExperience);
 
-    if (!jobRequiredLevel) return 0.5;
+    if (!jobRequiredLevel) return 0.5; // neutral if unknown
 
     const levelDiff = Math.abs(personaLevelValue - jobRequiredLevel);
-    return Math.max(0, 1 - (levelDiff * 0.3));
+    return Math.max(0, 1 - levelDiff * 0.3);
   }
 
-  private extractJobExperienceLevel(jobExperience: any): number | null {
+  private extractJobExperienceLevel(jobExperience: unknown): number | null {
     if (!jobExperience) return null;
 
     const experienceStr = JSON.stringify(jobExperience).toLowerCase();
 
-    if (experienceStr.includes('senior') || experienceStr.includes('lead')) return 3.5;
+    // Map textual hints to scale 1..4
+    if (experienceStr.includes('lead')) return 4;
+    if (experienceStr.includes('senior') || experienceStr.includes('principal')) return 3;
     if (experienceStr.includes('mid') || experienceStr.includes('intermediate')) return 2;
     if (experienceStr.includes('junior') || experienceStr.includes('entry')) return 1;
+
+    // If explicit numbers like "5+ years" appear, approximate
+    const yearsMatch = experienceStr.match(/(\d+)\s*\+?\s*year/);
+    if (yearsMatch) {
+      const years = parseInt(yearsMatch[1], 10);
+      if (Number.isFinite(years)) {
+        if (years >= 8) return 4; // lead
+        if (years >= 5) return 3; // senior
+        if (years >= 2) return 2; // mid
+        return 1; // junior
+      }
+    }
 
     return null;
   }
 
-  private calculateSalaryFit(userPreferences: UserPreferences | null, jobSalaryRange: any): number {
+  private calculateSalaryFit(
+    userPreferences: UserPreferences | null,
+    jobSalaryRange: SalaryRangeLike | null,
+  ): number {
     if (!userPreferences || !jobSalaryRange) {
-      return 0.5;
+      return 0.5; // neutral when unknown
     }
 
-    const userMin = userPreferences.minSalary || 0;
-    const userMax = userPreferences.maxSalary || Infinity;
-    const jobMin = jobSalaryRange.min || 0;
-    const jobMax = jobSalaryRange.max || Infinity;
+    const userMin = Number(userPreferences.minSalary ?? 0);
+    const userMaxRaw = userPreferences.maxSalary;
+    const jobMin = Number(jobSalaryRange.min ?? 0);
+    const jobMaxRaw = jobSalaryRange.max;
 
+    const userMax = userMaxRaw == null ? Infinity : Number(userMaxRaw);
+    const jobMax = jobMaxRaw == null ? Infinity : Number(jobMaxRaw);
+
+    // No overlap
     const overlapStart = Math.max(userMin, jobMin);
     const overlapEnd = Math.min(userMax, jobMax);
-
-    if (overlapStart > overlapEnd) return 0;
+    if (overlapStart >= overlapEnd) return 0;
 
     const userRange = userMax - userMin;
     const jobRange = jobMax - jobMin;
     const overlap = overlapEnd - overlapStart;
 
-    const minRange = Math.min(userRange, jobRange);
-    return overlap / minRange;
+    // Handle zero or infinite ranges robustly
+    const finiteRanges = [userRange, jobRange].filter(r => Number.isFinite(r) && r > 0) as number[];
+    if (finiteRanges.length === 0) {
+      // Both ranges are zero or unbounded - any overlap -> treat as good fit
+      return 1;
+    }
+    const denom = Math.min(...finiteRanges);
+    if (denom <= 0) return overlap > 0 ? 1 : 0;
+
+    const ratio = overlap / denom;
+    return Math.max(0, Math.min(1, ratio));
+  }
+
+  private normalizeRemotePreference(value: unknown): RemotePreference | null {
+    if (value == null) return null;
+    if (typeof value === 'number') return value as RemotePreference;
+    if (typeof value === 'string') {
+      const v = value.toLowerCase();
+      if (v === 'remote') return RemotePreference.REMOTE as RemotePreference;
+      if (v === 'hybrid') return RemotePreference.HYBRID as RemotePreference;
+      if (v === 'onsite' || v === 'on-site' || v === 'office')
+        return RemotePreference.ONSITE as RemotePreference;
+    }
+    return null;
   }
 
   private calculateLocationCompatibility(
     userPreferences: UserPreferences | null,
-    jobLocation: string,
-    remotePreference: RemotePreference,
+    jobLocation: string | null | undefined,
+    remotePreference: RemotePreference | null | undefined,
   ): number {
-    if (!userPreferences) return 0.5;
+    if (!userPreferences) return 0.5; // neutral when unknown
 
-    if (userPreferences.remotePreference === 'remote' || remotePreference === RemotePreference.REMOTE) return 1;
+    const userRemote = this.normalizeRemotePreference(
+      (userPreferences as any)?.remotePreference,
+    );
+    const jobRemote = this.normalizeRemotePreference(remotePreference);
 
-    if (userPreferences.location) {
-      const userLocation = userPreferences.location.toLowerCase();
-      const jobLocationLower = jobLocation.toLowerCase();
-      if (jobLocationLower.includes(userLocation) || userLocation.includes(jobLocationLower)) {
+    // If either side prefers remote, consider compatible
+    if (userRemote === RemotePreference.REMOTE || jobRemote === RemotePreference.REMOTE) {
+      return 1;
+    }
+
+    const userLocationRaw = (userPreferences as any)?.location ?? '';
+    const userLocation = typeof userLocationRaw === 'string' ? userLocationRaw.toLowerCase().trim() : '';
+    const jobLocationLower = (jobLocation ?? '').toString().toLowerCase().trim();
+
+    if (userLocation && jobLocationLower) {
+      if (
+        jobLocationLower.includes(userLocation) ||
+        userLocation.includes(jobLocationLower)
+      ) {
         return 1;
       }
     }
 
-    return 0;
+    // Hybrid considered partial compatibility if not remote
+    if (
+      userRemote === RemotePreference.HYBRID ||
+      jobRemote === RemotePreference.HYBRID
+    ) {
+      return 0.5;
+    }
+
+    return 0; // otherwise incompatible
   }
 
-  private calculateCulturalFit(userPreferences: UserPreferences | null, jobPosting: any): number {
+  private calculateCulturalFit(
+    userPreferences: UserPreferences | null,
+    jobPosting: JobPosting,
+  ): number {
+    // Minimal viable: return neutral unless we have obvious keywords on both sides.
     if (!userPreferences) return 0.5;
 
-    const jobDescription = jobPosting.description.toLowerCase();
-    
+    const prefsText = JSON.stringify({
+      // Add fields here as they exist in your schema, this is defensive only
+      values: (userPreferences as any)?.preferredValues,
+      culture: (userPreferences as any)?.culture,
+    })
+      .toLowerCase()
+      .trim();
+
+    const jobText = JSON.stringify({
+      description: (jobPosting as any)?.description,
+      culture: (jobPosting as any)?.culture,
+      values: (jobPosting as any)?.values,
+    })
+      .toLowerCase()
+      .trim();
+
+    if (!prefsText || !jobText) return 0.5;
+
+    // Very naive overlap check
+    let hits = 0;
+    for (const token of ['inclusive', 'fast-paced', 'collaborative', 'innovative', 'transparent']) {
+      if (prefsText.includes(token) && jobText.includes(token)) hits += 1;
+    }
+
+    if (hits >= 3) return 1;
+    if (hits === 2) return 0.75;
+    if (hits === 1) return 0.6;
+    return 0.5; // neutral otherwise
+  }
+
+  private calculateConstraintsCompliance(_persona: Persona, _jobPosting: JobPosting): number {
+    // Placeholder: until implemented, return neutral rather than 1.0 to avoid skewing.
     return 0.5;
   }
 
-  private calculateConstraintsCompliance(persona: any, jobPosting: any): number {
-    return 1;
-  }
-
   async findMatches(personaId: string): Promise<MatchResult[]> {
+    // Fetch persona once to avoid N+1 queries.
+    const persona = await this.personaRepository.findOne({
+      where: { id: personaId },
+      relations: ['profile', 'profile.user', 'profile.user.preferences'],
+    });
+    if (!persona) {
+      throw new NotFoundException(`Persona not found: ${personaId}`);
+    }
+
     const activeJobs = await this.jobPostingRepository.find({
       where: { isExpired: false },
     });
 
-    const matches = await Promise.all(
-      activeJobs.map(job => this.calculateMatchScore(personaId, job.id)),
-    );
+    const matches = activeJobs.map(job => this.calculateMatchScoreForEntities(persona, job));
 
-    return matches.sort((a, b) => b.overallScore - a.overallScore);
+    // Stable sort with tie-breaker on skills component
+    return matches.sort((a, b) => {
+      const diff = b.overallScore - a.overallScore;
+      if (Math.abs(diff) > 1e-9) return diff;
+      return b.breakdown.skills - a.breakdown.skills;
+    });
   }
 
   async updateModelWithFeedback(matchResult: MatchResult, feedback: 'positive' | 'negative'): Promise<void> {
@@ -221,18 +431,67 @@ export class MatchingService {
     return true;
   }
 
-  private performBayesianUpdate(matchResult: MatchResult, feedback: 'positive' | 'negative'): void {
-    console.log('Performing Bayesian update with feedback:', feedback);
+  private performBayesianUpdate(_matchResult: MatchResult, _feedback: 'positive' | 'negative'): void {
+    // Bayesian update placeholder implementation
   }
 
+  // Replace randomness with deterministic logic using synthetic cases.
   async validateScoringLogic(): Promise<{ success: boolean; examples: any[] }> {
     const examples = [
-      this.createValidationExample('Senior Full Stack Developer', 'Mid'),
-      this.createValidationExample('Entry Level Frontend Developer', 'Junior'),
-      this.createValidationExample('Product Manager', 'Senior'),
+      this.createValidationExample(
+        {
+          id: 'persona-1',
+          skills: ['typescript', 'react', 'node'],
+          experienceLevel: ExperienceLevel.SENIOR,
+          profile: { user: { preferences: { minSalary: 120000, maxSalary: 180000, location: 'new york', remotePreference: 'hybrid' } } } as any,
+        } as Persona,
+        {
+          id: 'job-1',
+          skills: ['typescript', 'node', 'aws'],
+          description: 'Senior full stack engineer in a collaborative and innovative team',
+          salaryRange: { min: 130000, max: 170000 },
+          location: 'New York, NY',
+          remotePreference: RemotePreference.HYBRID,
+          isExpired: false,
+        } as any as JobPosting,
+      ),
+      this.createValidationExample(
+        {
+          id: 'persona-2',
+          skills: ['html', 'css', 'javascript'],
+          experienceLevel: ExperienceLevel.JUNIOR,
+          profile: { user: { preferences: { minSalary: 60000, maxSalary: 90000, location: 'remote', remotePreference: 'remote' } } } as any,
+        } as Persona,
+        {
+          id: 'job-2',
+          skills: ['javascript', 'css'],
+          description: 'Entry level frontend developer role. Collaborative culture.',
+          salaryRange: { min: 65000, max: 80000 },
+          location: 'Remote',
+          remotePreference: RemotePreference.REMOTE,
+          isExpired: false,
+        } as any as JobPosting,
+      ),
+      this.createValidationExample(
+        {
+          id: 'persona-3',
+          skills: ['sql', 'project management'],
+          experienceLevel: ExperienceLevel.MID,
+          profile: { user: { preferences: { minSalary: 100000, maxSalary: 120000, location: 'austin', remotePreference: 'onsite' } } } as any,
+        } as Persona,
+        {
+          id: 'job-3',
+          skills: ['project management', 'excel'],
+          description: 'Product manager, mid level, transparent culture',
+          salaryRange: { min: 95000, max: 125000 },
+          location: 'Austin, TX',
+          remotePreference: RemotePreference.ONSITE,
+          isExpired: false,
+        } as any as JobPosting,
+      ),
     ];
 
-    const allValid = examples.every(example => example.score >= 0.75);
+    const allValid = examples.every(example => example.score >= this.MIN_RELEVANCE_SCORE);
 
     return {
       success: allValid,
@@ -240,11 +499,14 @@ export class MatchingService {
     };
   }
 
-  private createValidationExample(jobTitle: string, experienceLevel: string): any {
+  private createValidationExample(persona: Persona, job: JobPosting): any {
+    const breakdown = this.calculateScoreBreakdown(persona, job);
+    const score = this.calculateOverallScore(breakdown);
     return {
-      jobTitle,
-      experienceLevel,
-      score: Math.random() * 0.25 + 0.75,
+      personaId: (persona as any).id,
+      jobPostingId: (job as any).id,
+      breakdown,
+      score,
     };
   }
 
@@ -280,10 +542,10 @@ export class MatchingService {
     return [
       'Skills matching relies on keyword matching, not semantic understanding',
       'Experience level is inferred from text analysis, not structured data',
-      'Salary fit calculations assume linear range overlap',
-      'Location compatibility is based on city/region matching',
-      'Cultural fit relies on keyword matching in job descriptions',
-      'Constraints compliance only checks excluded companies',
+      'Salary fit calculations handle open-ended and zero-width ranges defensively',
+      'Location compatibility is based on city/region matching and remote/hybrid normalization',
+      'Cultural fit uses minimal keyword overlap and carries zero weight by default',
+      'Constraints compliance returns neutral until implemented',
     ];
   }
 }

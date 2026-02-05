@@ -1,0 +1,138 @@
+# NGINX Ingress Controller Configuration
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway-ingress
+  namespace: simpleasthat
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-next-upstream: "error timeout non_idempotent"
+    nginx.ingress.kubernetes.io/proxy-next-upstream-tries: "3"
+    nginx.ingress.kubernetes.io/limit-rps: "1000"
+    nginx.ingress.kubernetes.io/limit-connections: "100"
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "gateway-session"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Request-ID: $request_id";
+      more_set_headers "X-Response-Time: $upstream_response_time";
+      more_set_headers "X-Upstream-Addr: $upstream_addr";
+spec:
+  tls:
+    - hosts:
+        - api.simpleasthat.com
+        - "*.api.simpleasthat.com"
+      secretName: api-tls-secret
+  rules:
+    - host: api.simpleasthat.com
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+          - path: /metrics
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+---
+# Rate Limiting Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rate-limited-api
+  namespace: simpleasthat
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-connections: "10"
+    nginx.ingress.kubernetes.io/limit-rate-after: "1000"
+spec:
+  tls:
+    - hosts:
+        - api.simpleasthat.com
+      secretName: api-tls-secret
+  rules:
+    - host: api.simpleasthat.com
+      http:
+        paths:
+          - path: /api/v1/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+---
+# Health Check Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: health-ingress
+  namespace: simpleasthat
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+    - host: health.simpleasthat.com
+      http:
+        paths:
+          - path: /live
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+          - path: /ready
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 80
+---
+# API Version Ingress
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: nginx
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+spec:
+  controller: k8s.io/ingress-nginx
+---
+# TLS Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-tls-secret
+  namespace: simpleasthat
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lKQUt4cHhQWHcrNkowTUFvR0NDcUdTTTQ5QkFNQ01CNHhIREFhQmdOVkJBTU0KRTJGd2NDNWxlR0Z0Y0d4bExtTnZiU0F3SGhjTk1qTXdNVEF4TURBd01EQXdXaGNOTWpRd01UQXhNREF3TURBdwpXakFlTVJ3d0dnWURWUVFEREJOaGNIQXVaWGhoYlhCc1pTNWpiMjBnTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJCnpqMERBUWNEUWdBRXBsYlhBS2d4UWVHczd0VUN4Sk1GUXdKQVFVQXh4WVZFV0xVcXc0Z1Z0c0d4YVB4QWYKQUt4cHhQWHcrNkowTUFvR0NDcUdTTTQ5QkFNQ01CNHhIREFhQmdOVkJBTU0KRTJGd2NDNWxlR0Z0Y0d4bAptTnZiU0F3SGhjTk1qTXdNVEF4TURBd01EQXdXaGNOTWpRd01UQXhNREF3TURBdwpXakFlTVJ3d0dnWURWUVFEREJOaGNIQXVaWGhoYlhCc1pTNWpiMjBnTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJCnpqMERBUWNEUWdBRXBsYlhBS2d4UWVHczd0VUN4Sk1GUXdKQVFVQXh4WVZFV0xVcXc0Z1Z0c0d4YVB4QWYKQUt4cHhQWHcrNkowTUFvR0NDcUdTTTQ5QkFNQ01CNHhIREFhQmdOVkJBTU0KRTJGd2NDNWxlR0Z0Y0d4bAptTnZiU0F3SGhjTk1qTXdNVEF4TURBd01EQXdXaGNOTWpRd01UQXhNREF3TURBdwpXakFlTVJ3d0dnWURWUVFEREJOaGNIQXVaWGhoYlhCc1pTNWpiMjBnTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJCnpqMERBUWNEUWdBRXBsYlhBS2d4UWVHczd0VUN4Sk1GUXdKQVFVQXh4WVZFV0xVcXc0Z1Z0c0d4YVB4QWYKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCnBsYlhBS2d4UWVHczd0VUN4Sk1GUXdKQVFVQXh4WVZFV0xVcXc0Z1Z0c0d4YVB4QWYKQUt4cHhQWHcrNkowTUFvCkNDcUdTTTQ5QkFNQ01CNHhIREFhQmdOVkJBTU0KRTJGd2NDNWxlR0Z0Y0d4bExtTnZiU0F3SGhjTk1qTXdNVEF4Ck1EQXdNREF3TURBd1doY05NalF3TVRBeE1EQXdNREF3TURBd1dqQWlNUmd3RmdZRFZRUUREQ05oY0hBdVpYaGgKYlhCc1pTNWpiMjBnTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJCnpqMERBUWNEUWdBRXBsYlhBS2d4UWVHczd0CkVD

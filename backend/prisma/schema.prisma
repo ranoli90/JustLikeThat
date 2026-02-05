@@ -4,11 +4,472 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-  extensions = [pgvector("0.5.0")]
 }
 
-// Resume storage
+// ============ CORE USER & AUTH MODELS ============
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          Role      @default(USER)
+  tenantId      String
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  resumes       Resume[]
+  interviews    InterviewSession[]
+}
+
+// ============ MULTI-TENANT MODELS ============
+
+model Tenant {
+  id              String         @id @default(uuid())
+  name            String
+  slug            String         @unique
+  domain          String?        @unique
+  subdomain       String?        @unique
+  plan            PlanType       @default(FREE)
+  status          TenantStatus   @default(ACTIVE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // Enterprise features
+  enterpriseId    String?
+  resourcePool    String?
+  slaLevel        SlaLevel?
+  dedicatedSupport Boolean       @default(false)
+  
+  // Data residency
+  dataResidency   DataResidency  @default(US)
+  
+  // Relations
+  users           User[]
+  resumes         Resume[]
+  interviews      InterviewSession[]
+  companies        CompanyInsight[]
+  jobs            JobPosting[]
+  applications    Application[]
+  
+  // Multi-tenant specific
+  branding        TenantBranding?
+  featureFlags    TenantFeatureFlag[]
+  usages          TenantUsage[]
+  billingPlans    BillingPlan[]
+  customDomains   CustomDomain[]
+  webhooks        TenantWebhook[]
+  integrations    TenantIntegration[]
+  rateLimits      TenantRateLimit[]
+  apiQuotas       TenantApiQuota[]
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+  DELETED
+}
+
+enum PlanType {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+enum SlaLevel {
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum DataResidency {
+  US
+  EU
+  APAC
+}
+
+// White-Label & Branding
+model TenantBranding {
+  id              String   @id @default(uuid())
+  tenantId        String   @unique
+  primaryColor    String   @default("#3B82F6")
+  secondaryColor  String   @default("#10B981")
+  accentColor     String   @default("#F59E0B")
+  backgroundColor String   @default("#FFFFFF")
+  textColor       String   @default("#1F2937")
+  
+  // Assets
+  logoUrl         String?
+  faviconUrl      String?
+  heroImageUrl    String?
+ OgImageUrl      String?
+  
+  // Typography
+  primaryFont     String   @default("Inter")
+  secondaryFont   String   @default("Roboto")
+  customFonts     Json?
+  
+  // Custom code
+  customCss       String?
+  customJs        String?
+  headerHtml      String?
+  footerHtml      String?
+  
+  // Landing page builder
+  landingPageConfig Json?
+  
+  // Email branding
+  emailHeaderHtml String?
+  emailFooterHtml String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+// Feature Flags
+model TenantFeatureFlag {
+  id              String   @id @default(uuid())
+  tenantId        String
+  featureName     String
+  featureKey      String
+  isEnabled       Boolean  @default(true)
+  config          Json?
+  priority        Int      @default(0)
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, featureKey])
+}
+
+// Usage Tracking
+model TenantUsage {
+  id              String   @id @default(uuid())
+  tenantId        String
+  metricType      String
+  metricName      String
+  quantity        Float    @default(0)
+  unit            String   @default("count")
+  periodStart     DateTime
+  periodEnd       DateTime
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId, metricType, periodStart])
+}
+
+// Billing Plans
+model BillingPlan {
+  id              String   @id @default(uuid())
+  tenantId        String
+  name            String
+  tier            String
+  basePrice       Float    @default(0)
+  currency        String   @default("USD")
+  billingCycle    BillingCycle @default(MONTHLY)
+  
+  // Usage limits
+  includedUsage   Json     @default("{}")
+  overageRates    Json     @default("{}")
+  
+  // Features
+  features        Json     @default("[]")
+  limits          Json     @default("{}")
+  
+  isActive        Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices        Invoice[]
+  usageAlerts     UsageAlert[]
+  
+  @@index([tenantId, isActive])
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  tenantId        String
+  planId          String
+  invoiceNumber   String        @unique
+  status          InvoiceStatus @default(DRAFT)
+  
+  // Amounts
+  subtotal        Float
+  discount        Float         @default(0)
+  tax             Float         @default(0)
+  total           Float
+  currency        String        @default("USD")
+  
+  // Period
+  periodStart     DateTime
+  periodEnd       DateTime
+  
+  // Line items
+  lineItems       Json
+  
+  // Payment
+  paidAt          DateTime?
+  paymentMethod   String?
+  paymentId       String?
+  
+  // PDF
+  pdfUrl          String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  plan            BillingPlan   @relation(fields: [planId], references: [id])
+  
+  @@index([tenantId, status])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model UsageAlert {
+  id              String        @id @default(uuid())
+  tenantId        String
+  planId          String
+  metricType      String
+  threshold       Float
+  alertType       AlertType
+  isActive        Boolean       @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime      @default(now())
+  
+  plan            BillingPlan   @relation(fields: [planId], references: [id])
+  
+  @@index([tenantId, isActive])
+}
+
+enum AlertType {
+  WARNING
+  CRITICAL
+}
+
+// Custom Domains
+model CustomDomain {
+  id              String         @id @default(uuid())
+  tenantId        String
+  domain          String
+  subdomain       String?
+  
+  // DNS Configuration
+  dnsConfig       Json?
+  
+  // SSL
+  sslStatus       SslStatus      @default(PENDING)
+  sslCertUrl     String?
+  sslExpiresAt   DateTime?
+  
+  // Verification
+  isVerified      Boolean        @default(false)
+  verifiedAt      DateTime?
+  verificationToken String?
+  
+  // CDN
+  cdnEnabled      Boolean        @default(false)
+  
+  status          DomainStatus   @default(PENDING)
+  errorMessage   String?
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, domain])
+  @@index([domain])
+}
+
+enum SslStatus {
+  PENDING
+  PROVISIONING
+  ACTIVE
+  EXPIRED
+  FAILED
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
+  PROVISIONING
+  ACTIVE
+  SUSPENDED
+  FAILED
+}
+
+// Webhooks
+model TenantWebhook {
+  id              String        @id @default(uuid())
+  tenantId        String
+  name            String
+  url             String
+  secret          String
+  events          String[]
+  
+  // Configuration
+  isActive        Boolean       @default(true)
+  headers         Json?
+  
+  // Retry configuration
+  maxRetries      Int           @default(3)
+  timeout         Int           @default(30)
+  
+  // Stats
+  totalRequests   Int           @default(0)
+  failedRequests  Int           @default(0)
+  lastTriggeredAt DateTime?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  webhookLogs     WebhookLog[]
+  
+  @@index([tenantId, isActive])
+}
+
+model WebhookLog {
+  id              String        @id @default(uuid())
+  webhookId       String
+  event           String
+  payload         Json
+  responseStatus  Int?
+  responseBody    String?
+  error           String?
+  duration        Int?
+  
+  createdAt       DateTime      @default(now())
+  
+  webhook         TenantWebhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+}
+
+// Integrations
+model TenantIntegration {
+  id              String            @id @default(uuid())
+  tenantId        String
+  provider        IntegrationProvider
+  name            String
+  
+  // Credentials (encrypted)
+  credentials     Json?
+  
+  // Configuration
+  config          Json?
+  
+  // Status
+  isActive        Boolean           @default(true)
+  lastSyncAt      DateTime?
+  syncStatus      SyncStatus        @default(IDLE)
+  
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, provider])
+}
+
+enum IntegrationProvider {
+  SLACK
+  DISCORD
+  TEAMS
+  ZAPIER
+  WEBHOOK
+  HUBSPOT
+  SALESFORCE
+  ZENDESK
+  JIRA
+  CUSTOM
+}
+
+enum SyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  FAILED
+}
+
+// Rate Limiting
+model TenantRateLimit {
+  id              String        @id @default(uuid())
+  tenantId        String
+  endpoint        String
+  method          String        @default("GET")
+  
+  // Limits
+  requestsPerMinute  Int         @default(100)
+  requestsPerHour    Int         @default(1000)
+  requestsPerDay     Int         @default(10000)
+  
+  // Burst configuration
+  burstSize       Int           @default(10)
+  
+  isActive        Boolean       @default(true)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, endpoint, method])
+}
+
+// API Quotas
+model TenantApiQuota {
+  id              String        @id @default(uuid())
+  tenantId        String
+  quotaType       String
+  
+  // Quota limits
+  dailyLimit      Int?
+  monthlyLimit    Int?
+  yearlyLimit     Int?
+  
+  // Usage tracking
+  currentUsage    Int           @default(0)
+  resetAt         DateTime?
+  
+  isActive        Boolean       @default(true)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  @@unique([tenantId, quotaType])
+}
+
+// ============ CORE APPLICATION MODELS ============
+
 model Resume {
   id          String         @id @default(uuid())
   tenantId    String
@@ -23,7 +484,6 @@ model Resume {
   updatedAt   DateTime       @updatedAt
 }
 
-// Interview preparation and coaching
 model InterviewSession {
   id                String             @id @default(uuid())
   tenantId          String
@@ -32,7 +492,7 @@ model InterviewSession {
   interviewType     InterviewType
   interviewFormat   InterviewFormat
   scheduledAt       DateTime?
-  duration          Int                @default(60) // minutes
+  duration          Int                @default(60)
   status            InterviewStatus    @default(DRAFT)
   notes             String?
   feedback          Json?
@@ -73,7 +533,6 @@ enum InterviewStatus {
   CANCELLED
 }
 
-// Interview questions and answers
 model InterviewQuestion {
   id                String           @id @default(uuid())
   sessionId         String
@@ -107,7 +566,6 @@ enum Difficulty {
   HARD
 }
 
-// Company research and insights
 model CompanyInsight {
   id                String           @id @default(uuid())
   tenantId          String
@@ -131,7 +589,6 @@ model CompanyInsight {
   updatedAt         DateTime         @updatedAt
 }
 
-// Interview practice sessions
 model InterviewPractice {
   id                String           @id @default(uuid())
   sessionId         String
@@ -140,7 +597,7 @@ model InterviewPractice {
   userAnswer        String
   aiFeedback        Json?
   confidenceScore   Float?
-  timeTaken         Int?            // seconds
+  timeTaken         Int?
   improvementAreas  Json?
   strengths         Json?
   session           InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -148,7 +605,6 @@ model InterviewPractice {
   updatedAt         DateTime         @updatedAt
 }
 
-// Interview scheduling
 model InterviewSchedule {
   id                String           @id @default(uuid())
   sessionId         String           @unique
@@ -166,9 +622,530 @@ model InterviewSchedule {
   updatedAt         DateTime         @updatedAt
 }
 
-// Salary negotiation preparation
+model JobPosting {
+  id            String    @id @default(uuid())
+  tenantId      String
+  title         String
+  description   String
+  requirements  String
+  responsibilities String?
+  location      String?
+  salaryRange   Json?
+  jobType       String
+  experienceLevel String?
+  skills        Json
+  benefits      Json?
+  companyName   String
+  companyLogo   String?
+  status        String    @default("DRAFT")
+  source        String?
+  externalId    String?
+  publishedAt   DateTime?
+  expiresAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model Application {
+  id            String   @id @default(uuid())
+  tenantId      String
+  userId        String
+  jobId         String
+  status        String   @default("DRAFT")
+  resumeUrl     String?
+  coverLetter   String?
+  responses     Json?
+  score         Float?
+  feedback      Json?
+  submittedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+}
+
+model CandidateProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  summary         String?
+  experience      Json
+  skills          Json
+  education       Json
+  certifications  Json?
+  careerGoals     Json?
+  preferences     Json?
+  location        String?
+  remotePreference String?
+  salaryExpectation Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============ ANALYTICS MODELS ============
+
+model AnalyticsEvent {
+  id          String   @id @default(uuid())
+  eventType   String
+  userId      String?
+  sessionId   String?
+  tenantId    String?
+  properties  Json
+  timestamp   DateTime @default(now())
+  processedAt DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Dashboard {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  layout      Json
+  widgets     Json
+  filters     Json?
+  isPublic    Boolean  @default(false)
+  shareToken  String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DashboardWidget {
+  id          String   @id @default(uuid())
+  dashboardId String
+  widgetType  String
+  title       String
+  config      Json
+  position    Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id          String   @id @default(uuid())
+  userId      String?
+  sessionKey  String   @unique
+  deviceInfo  Json?
+  browserInfo Json?
+  ipAddress   String?
+  location    Json?
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  duration    Int?
+  pageCount   Int      @default(0)
+  events      SessionEvent[]
+  createdAt   DateTime @default(now())
+}
+
+model SessionEvent {
+  id          String   @id @default(uuid())
+  sessionId   String
+  eventType   String
+  elementId   String?
+  elementType String?
+  pageUrl     String?
+  x           Float?
+  y           Float?
+  metadata    Json?
+  timestamp   DateTime @default(now())
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model HeatmapData {
+  id          String   @id @default(uuid())
+  pageUrl     String
+  x           Float
+  y           Float
+  weight      Float    @default(1.0)
+  eventType   String   @default("click")
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model Funnel {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  steps       Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FunnelStep {
+  id          String   @id @default(uuid())
+  funnelId    String
+  stepOrder   Int
+  name        String
+  eventType   String
+  conditions  Json?
+}
+
+// ============ AB TESTING MODELS ============
+
+model ABTest {
+  id          String       @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  status      ABTestStatus @default(DRAFT)
+  
+  // Test configuration
+  variants    Json
+  trafficAllocation Json?
+  targetMetric String
+  
+  // Schedule
+  startDate   DateTime?
+  endDate     DateTime?
+  
+  // Results
+  results     Json?
+  winner      String?
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum ABTestStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+model ABTestAssignment {
+  id          String   @id @default(uuid())
+  testId      String
+  userId      String
+  variant     String
+  converted   Boolean  @default(false)
+  convertedAt DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+}
+
+// ============ ML MODELS ============
+
+model MLModelVersion {
+  id          String     @id @default(uuid())
+  modelType   ModelType
+  version     String
+  modelPath   String
+  accuracy    Float
+  deployedAt  DateTime   @default(now())
+  isActive    Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+}
+
+model ResumeOptimization {
+  id                String   @id @default(uuid())
+  resumeId          String
+  optimizationScore Float
+  keywordScore      Float
+  atsScore          Float
+  suggestions       Json
+  optimizedResume   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model JobMatchPrediction {
+  id            String   @id @default(uuid())
+  candidateId   String
+  jobId         String
+  matchScore    Float
+  successProb   Float
+  factors       Json
+  explanation   Json
+  createdAt     DateTime @default(now())
+}
+
+model NLPAnalysis {
+  id              String   @id @default(uuid())
+  targetType      String
+  targetId        String
+  entities        Json
+  sentiment       Float
+  keyPhrases      Json[]
+  skillsExtracted Json
+  createdAt       DateTime @default(now())
+}
+
+model DocumentAnalysis {
+  id              String   @id @default(uuid())
+  documentId      String
+  documentType    String
+  layoutAnalysis  Json?
+  signatureDetected Boolean @default(false)
+  photoQuality    Float?
+  authenticityScore Float?
+  categorization  String?
+  analysisResult  Json
+  createdAt       DateTime @default(now())
+}
+
+model PredictionResult {
+  id              String   @id @default(uuid())
+  predictionType  String
+  targetId        String
+  prediction      Float
+  confidence      Float
+  factors         Json
+  modelVersion    String
+  createdAt       DateTime @default(now())
+}
+
+enum ModelType {
+  JOB_MATCHING
+  RESUME_OPTIMIZATION
+  APPLICATION_PREDICTION
+  NLU_PROCESSING
+  DOCUMENT_VISION
+}
+
+// ============ ENUMS ============
+
+enum Role {
+  USER
+  ADMIN
+  RECRUITER
+  SUPER_ADMIN
+}
+
+enum Plan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+  CUSTOM
+}
+
+// ============ CAREER MODELS ============
+
+model CareerGoal {
+  id              String   @id @default(uuid())
+  userId          String
+  targetRole      String?
+  targetIndustry  String?
+  targetLocation  String?
+  salaryTarget    Int?
+  timeline        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CareerMilestone {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String?
+  date        DateTime
+  type        String
+  createdAt   DateTime @default(now())
+}
+
+model Skill {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String?
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model NetworkingOpportunity {
+  id              String   @id @default(uuid())
+  userId          String
+  company         String
+  contactName     String?
+  contactEmail    String?
+  linkedinUrl     String?
+  status          String   @default("NEW")
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model WarmIntro {
+  id              String   @id @default(uuid())
+  userId          String
+  targetContactId String?
+  company         String
+  position         String
+  introStatus     String   @default("PENDING")
+  message         String?
+  createdAt       DateTime @default(now())
+}
+
+model SalaryProjection {
+  id              String   @id @default(uuid())
+  userId          String
+  position        String
+  company         String?
+  location        String
+  experienceLevel String
+  salaryRange     Json
+  confidence      Float
+  factors         Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model IndustryTrend {
+  id              String   @id @default(uuid())
+  industry        String
+  title           String
+  description     String
+  impact          String
+  source          String?
+  publishedAt     DateTime
+  createdAt       DateTime @default(now())
+}
+
+model Survey {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  questions   Json
+  responses   Json?
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Feedback {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  content     String
+  rating      Int?
+  isResolved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Mentorship {
+  id              String   @id @default(uuid())
+  mentorId        String
+  menteeId        String
+  status          String   @default("ACTIVE")
+  goals           Json?
+  meetingSchedule String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model OutreachSequence {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  steps       Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OutreachTemplate {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  subject     String
+  body        String
+  type        String
+  variables   Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OutreachCampaign {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  sequenceId  String
+  status      String   @default("DRAFT")
+  targets     Json
+  stats       Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OutreachContact {
+  id          String   @id @default(uuid())
+  tenantId    String
+  email       String
+  name        String?
+  company     String?
+  status      String   @default("NEW")
+  tags        Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OutreachMessage {
+  id          String   @id @default(uuid())
+  campaignId  String
+  contactId   String
+  stepId      String
+  status      String   @default("PENDING")
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  repliedAt   DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model OutreachSource {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  type        String
+  config      Json
+  lastSyncAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model OutreachActivityLog {
+  id          String   @id @default(uuid())
+  tenantId    String
+  campaignId  String?
+  type        String
+  details     Json
+  createdAt   DateTime @default(now())
+}
+
+model RecruiterRelationship {
+  id              String   @id @default(uuid())
+  userId          String
+  recruiterName   String
+  recruiterFirm   String?
+  linkedinUrl     String?
+  email           String?
+  phone           String?
+  status          String   @default("NEW")
+  lastContactAt   DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model JobAlert {
+  id          String   @id @default(uuid())
+  userId      String
+  keywords    String?
+  location    String?
+  jobType     String?
+  salaryMin   Int?
+  salaryMax   Int?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
 model SalaryNegotiation {
-  id                String           @id @default(uuid())
+  id                String   @id @default(uuid())
   tenantId          String
   userId            String
   company           String
@@ -179,25 +1156,24 @@ model SalaryNegotiation {
   benefits          Json?
   negotiationStrategy Json?
   talkingPoints     Json?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
-// Post-interview follow-up
 model PostInterviewAction {
-  id                String           @id @default(uuid())
+  id                String   @id @default(uuid())
   tenantId          String
   userId            String
   applicationId     String
   interviewDate     DateTime
   followUpType      FollowUpType
-  status            ActionStatus     @default(PENDING)
+  status            ActionStatus @default(PENDING)
   dueDate           DateTime?
   message           String?
   sentAt            DateTime?
   notes             String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 enum FollowUpType {
@@ -214,3 +1190,1316 @@ enum ActionStatus {
   COMPLETED
   SKIPPED
 }
+
+model Automation {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  trigger     Json
+  conditions  Json?
+  actions     Json
+  isActive    Boolean  @default(true)
+  executedCount Int    @default(0)
+  lastExecutedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AutomationExecution {
+  id          String   @id @default(uuid())
+  automationId String
+  status      String
+  input       Json
+  output      Json?
+  error       String?
+  createdAt   DateTime @default(now())
+}
+
+// ============ INTERNATIONALIZATION (Sprint 35) ============
+
+model Locale {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  nativeName      String
+  direction       String   @default("ltr")
+  isActive        Boolean  @default(true)
+  isDefault       Boolean  @default(false)
+  fallbackLocale  String?
+  
+  // Regional settings
+  languageCode    String
+  territoryCode   String?
+  scriptCode      String?
+  
+  // Metadata
+  currency        String?
+  timezone        String?
+  dateFormat      String?
+  timeFormat      String?
+  numberFormat    Json?
+  pluralRules     String?
+  
+  // Translation stats
+  translationCount Int    @default(0)
+  coveragePercent  Float  @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  translations    Translation[]
+  translationWorkflows TranslationWorkflow[]
+}
+
+model Translation {
+  id              String   @id @default(uuid())
+  localeId        String
+  namespace       String
+  key             String
+  
+  // Translation content
+  value           String
+  valueHtml       String?
+  isPlural        Boolean  @default(false)
+  pluralIndex     Int?
+  pluralValues    Json?
+  
+  // Metadata
+  translatedAt    DateTime @default(now())
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  approvedBy      String?
+  approvedAt      DateTime?
+  
+  // Source info
+  sourceLocale    String?
+  sourceValue    String?
+  machineTranslated Boolean @default(false)
+  translationMemoryMatch Float?
+  
+  // Usage stats
+  usageCount      Int      @default(0)
+  lastUsedAt      DateTime?
+  
+  // Tenant-specific overrides
+  tenantId        String?
+  
+  // Status
+  status          TranslationStatus @default(DRAFT)
+  comment         String?
+  
+  locale          Locale   @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  
+  @@unique([localeId, namespace, key])
+  @@index([localeId, namespace])
+  @@index([status])
+}
+
+enum TranslationStatus {
+  DRAFT
+  PENDING_REVIEW
+  REVIEWED
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+model TranslationWorkflow {
+  id              String   @id @default(uuid())
+  localeId        String
+  namespace       String
+  
+  // Workflow stages
+  stage           WorkflowStage @default(DRAFT)
+  stageData       Json?
+  
+  // Assignments
+  assignedTo      String?
+  reviewerId      String?
+  approverId      String?
+  
+  // Priority and deadlines
+  priority        Int      @default(0)
+  dueAt           DateTime?
+  completedAt     DateTime?
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  locale          Locale   @relation(fields: [localeId], references: [id], onDelete: Cascade)
+  
+  @@index([localeId, stage])
+  @@index([assignedTo])
+}
+
+enum WorkflowStage {
+  DRAFT
+  TRANSLATION
+  REVIEW
+  APPROVAL
+  PUBLISH
+}
+
+model TranslationMemory {
+  id              String   @id @default(uuid())
+  
+  // Source segment
+  sourceLocale    String
+  sourceText     String
+  
+  // Target segment
+  targetLocale   String
+  targetText     String
+  
+  // Metadata
+  namespace       String?
+  context         String?
+  usageCount      Int      @default(0)
+  
+  // Quality metrics
+  matchType       MatchType
+  qualityScore    Float    @default(1.0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([sourceLocale, targetLocale])
+  @@index([sourceText(255)])
+}
+
+enum MatchType {
+  EXACT
+  FUZZY
+  PARTIAL
+  MACHINE_ONLY
+}
+
+model Glossary {
+  id              String   @id @default(uuid())
+  
+  // Term info
+  term            String
+  definition      String
+  description     String?
+  
+  // Localization
+  locale          String
+  translations    Json?
+  
+  // Metadata
+  partOfSpeech    String?
+  domain          String?
+  usageExamples   Json?
+  
+  // Status
+  isApproved      Boolean  @default(false)
+  approvedBy      String?
+  
+  // Relations
+  parentId        String?
+  relatedTerms    String[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([term, locale])
+  @@index([locale])
+  @@index([domain])
+}
+
+// ============ REGIONAL CONFIGURATIONS ============
+
+model RegionConfig {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  
+  // Geographic info
+  timezone        String
+  timezoneOffset  Float?
+  countries       String[]
+  
+  // Regional settings
+  defaultCurrency String
+  supportedCurrencies String[]
+  defaultLocale   String
+  supportedLocales String[]
+  
+  // Job market config
+  jobSources      Json
+  salaryData      Json
+  remoteWorkPolicy String?
+  
+  // Compliance
+  complianceRules Json
+  dataResidency   String?
+  gdprEnabled     Boolean  @default(false)
+  ccpaEnabled     Boolean  @default(false)
+  
+  // Pricing
+  basePrice       Float
+  pppMultiplier   Float    @default(1.0)
+  taxRate         Float    @default(0)
+  
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model JobSource {
+  id              String   @id @default(uuid())
+  regionCode      String
+  
+  // Source info
+  name            String
+  type            JobSourceType
+  baseUrl         String?
+  
+  // API config
+  apiEndpoint     String?
+  apiKey          String?
+  apiConfig       Json?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  lastSyncAt      DateTime?
+  syncStatus      SyncStatus @default(IDLE)
+  
+  // Metrics
+  totalJobs       Int      @default(0)
+  lastJobCount    Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode, isActive])
+}
+
+enum JobSourceType {
+  API
+  RSS
+  SCRAPER
+  PARTNER
+  AGGREGATOR
+}
+
+enum SyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+model RegionalSalary {
+  id              String   @id @default(uuid())
+  
+  // Job info
+  jobTitle        String
+  jobCategory     String?
+  experienceLevel String?
+  skills          String[]
+  
+  // Location
+  regionCode      String
+  countryCode     String?
+  city            String?
+  isRemote        Boolean  @default(false)
+  
+  // Salary data
+  currency        String
+  minSalary       Float
+  maxSalary       Float
+  medianSalary    Float?
+  averageSalary   Float?
+  
+  // Metadata
+  source          String
+  sampleSize      Int?
+  confidence      Float?
+  
+  // Timeframe
+  dataDate        DateTime
+  validUntil      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode, jobTitle])
+  @@index([countryCode])
+}
+
+model CurrencyRate {
+  id              String   @id @default(uuid())
+  
+  // Currency pair
+  fromCurrency    String
+  toCurrency      String
+  
+  // Rate data
+  rate            Float
+  inverseRate     Float?
+  
+  // Source
+  source          String
+  sourceUrl       String?
+  
+  // Timestamps
+  updatedAt       DateTime @default(now())
+  fetchedAt       DateTime @default(now())
+  
+  // Metadata
+  bid             Float?
+  ask             Float?
+  spread          Float?
+  
+  @@unique([fromCurrency, toCurrency])
+  @@index([fromCurrency])
+  @@index([updatedAt])
+}
+
+model PurchasingPowerParity {
+  id              String   @id @default(uuid())
+  
+  // Country/Region
+  countryCode     String
+  currency        String
+  
+  // PPP data
+  pppFactor       Float
+  gdpPerCapita    Float?
+  conversionRate  Float?
+  
+  // Year of data
+  year            Int
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([countryCode, year])
+}
+
+// ============ COMPLIANCE ============
+
+model ComplianceRequirement {
+  id              String   @id @default(uuid())
+  
+  // Regulation info
+  regionCode      String
+  regulation      String
+  regulationType  ComplianceType
+  
+  // Requirements
+  requirements    Json
+  dataRetention   Json?
+  consentRequired Boolean  @default(false)
+  
+  // Penalties
+  penalties       String?
+  fineAmount      Float?
+  fineCurrency    String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  
+  // Metadata
+  version         String?
+  sourceUrl       String?
+  lastReviewedAt  DateTime?
+  reviewedBy      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode, regulation])
+}
+
+enum ComplianceType {
+  GDPR
+  CCPA
+  LGPD
+  PIPEDA
+  POPIA
+  HIPAA
+  SOC2
+  ISO27001
+  PCI_DSS
+  CUSTOM
+}
+
+model ConsentRecord {
+  id              String   @id @default(uuid())
+  
+  // User info
+  userId          String
+  tenantId        String
+  
+  // Consent info
+  consentType     String
+  regulation      String?
+  
+  // Consent details
+  consentGiven    Boolean
+  consentVersion  String?
+  consentMethod  String?
+  consentIp      String?
+  
+  // Legal basis
+  legalBasis      String?
+  purpose         String?
+  
+  // Timestamps
+  consentedAt     DateTime @default(now())
+  withdrawnAt     DateTime?
+  renewedAt       DateTime?
+  
+  // Metadata
+  userAgent       String?
+  source          String?
+  
+  @@index([userId, consentType])
+  @@index([tenantId])
+}
+
+model DataResidencyRule {
+  id              String   @id @default(uuid())
+  
+  // Rule info
+  regionCode      String
+  dataCategory    String
+  
+  // Residency requirements
+  allowedRegions  String[]
+  restrictedRegions String[]
+  primaryRegion   String?
+  fallbackRegion  String?
+  
+  // Processing rules
+  canProcess      String[]
+  cannotProcess   String[]
+  requiresEncryption Boolean @default(true)
+  
+  // Retention
+  retentionPeriod Int?
+  retentionPolicy String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  priority        Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([regionCode, dataCategory])
+}
+
+// ============ CULTURAL ADAPTATION ============
+
+model CulturalNorm {
+  id              String   @id @default(uuid())
+  
+  // Target
+  localeCode      String
+  countryCode     String?
+  
+  // Date/Time formats
+  dateFormat      String
+  timeFormat      String
+  datetimeFormat  String?
+  firstDayOfWeek  Int      @default(1)
+  calendarType    String?
+  
+  // Number formats
+  decimalSeparator String  @default(".")
+  thousandsSeparator String?
+  numberFormat    Json?
+  currencyFormat  Json?
+  percentFormat   Json?
+  
+  // Address format
+  addressFormat   Json?
+  addressFields   Json?
+  
+  // Name format
+  nameFormat      Json?
+  nameOrder       String   @default("givenFamily")
+  
+  // Communication norms
+  greeting        String?
+  formalityLevel  String   @default("neutral")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([localeCode])
+}
+
+model TimezoneInfo {
+  id              String   @id @default(uuid())
+  
+  // Timezone
+  timezone        String   @unique
+  ianaCode        String   @unique
+  
+  // Location
+  countryCode     String
+  region          String?
+  city            String?
+  
+  // UTC offset
+  utcOffset       String
+  utcOffsetHours  Float
+  
+  // DST info
+  hasDST         Boolean  @default(false)
+  dstStart        String?
+  dstEnd          String?
+  dstOffset      String?
+  
+  // Display
+  shortName       String?
+  longName        String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([countryCode])
+}
+
+// ============ USER PREFERENCES ============
+
+model UserPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  
+  // Localization preferences
+  preferredLocale    String?
+  preferredCurrency  String?
+  preferredTimezone  String?
+  preferredDateFormat String?
+  
+  // RTL settings
+  forceRTL        Boolean  @default(false)
+  
+  // Regional settings
+  region          String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============ WORKFLOW ENGINE ============
+
+model WorkflowDefinition {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  version         Int      @default(1)
+  definition      Json     // Full workflow graph
+  status          WorkflowStatus @default(DRAFT)
+  tenantId        String
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  publishedAt     DateTime?
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  executions      WorkflowExecution[]
+  nodes           WorkflowNode[]
+  schedules       ScheduledWorkflow[]
+  history         WorkflowHistory[]
+  templates       WorkflowTemplate?
+  
+  @@index([tenantId, status])
+  @@index([tenantId, name])
+}
+
+enum WorkflowStatus {
+  DRAFT
+  PUBLISHED
+  DEPRECATED
+  ARCHIVED
+}
+
+model WorkflowExecution {
+  id              String   @id @default(uuid())
+  workflowId      String
+  version         Int
+  status          ExecutionStatus
+  trigger         String
+  input           Json
+  output          Json?
+  error           Json?
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  nodes           Json     // Node execution state
+  
+  // Resource tracking
+  resourceUsage   Json?
+  executionTime   Int?     // milliseconds
+  
+  // Retry tracking
+  retryCount      Int      @default(0)
+  parentExecutionId String?
+  
+  // Relations
+  workflow        WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  logs            WorkflowExecutionLog[]
+  
+  @@index([workflowId, status])
+  @@index([trigger])
+  @@index([startedAt])
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  PAUSED
+  CANCELLED
+  TIMEOUT
+}
+
+model WorkflowExecutionLog {
+  id              String   @id @default(uuid())
+  executionId     String
+  nodeId          String?
+  level           LogLevel
+  message         String
+  data            Json?
+  timestamp       DateTime @default(now())
+  
+  execution       WorkflowExecution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  
+  @@index([executionId, timestamp])
+  @@index([nodeId])
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}
+
+model WorkflowNode {
+  id              String   @id @default(uuid())
+  workflowId      String
+  nodeId          String
+  nodeType        String
+  config          Json
+  position        Json     // {x, y} coordinates
+  connections     Json     // Input/output connections
+  
+  // Validation
+  validationRules Json?
+  
+  // Relations
+  workflow        WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@unique([workflowId, nodeId])
+  @@index([workflowId])
+}
+
+model WorkflowTemplate {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  category        String
+  definition      Json
+  isPublic        Boolean  @default(false)
+  usageCount      Int      @default(0)
+  tenantId        String?
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  workflows       WorkflowDefinition[]
+  
+  @@index([category])
+  @@index([isPublic])
+}
+
+model ScheduledWorkflow {
+  id              String   @id @default(uuid())
+  workflowId      String
+  cronExpression  String
+  timezone        String   @default("UTC")
+  status          ScheduleStatus @default(ACTIVE)
+  lastRun         DateTime?
+  nextRun         DateTime
+  priority        Int      @default(5)
+  tenantId        String
+  
+  // Configuration
+  config          Json?    // {enabled: boolean, maxConcurrent: number}
+  
+  // Stats
+  totalRuns       Int      @default(0)
+  failedRuns      Int      @default(0)
+  
+  // Created by
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  workflow        WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId, status])
+  @@index([nextRun])
+  @@index([workflowId])
+}
+
+enum ScheduleStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+  FAILED
+}
+
+model WorkflowHistory {
+  id              String   @id @default(uuid())
+  workflowId      String
+  version         Int
+  action          WorkflowAction
+  snapshot        Json     // Complete workflow definition snapshot
+  changes         Json?    // Diff of changes
+  performedBy     String
+  performedAt     DateTime @default(now())
+  reason          String?
+  
+  // Relations
+  workflow        WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([workflowId, version])
+  @@index([performedAt])
+  @@index([performedBy])
+}
+
+enum WorkflowAction {
+  CREATE
+  UPDATE
+  PUBLISH
+  DEPRECATE
+  ARCHIVE
+  ROLLBACK
+  DELETE
+}
+
+model WorkflowTrigger {
+  id              String   @id @default(uuid())
+  workflowId      String
+  triggerType     TriggerType
+  config          Json     // Trigger-specific configuration
+  isActive        Boolean  @default(true)
+  tenantId        String
+  
+  // Webhook specific
+  webhookPath     String?
+  webhookSecret   String?
+  
+  // Stats
+  totalTriggers   Int      @default(0)
+  lastTriggeredAt DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  workflow        WorkflowDefinition @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([workflowId, isActive])
+  @@index([tenantId])
+}
+
+enum TriggerType {
+  WEBHOOK
+  SCHEDULE
+  EVENT
+  API
+  MANUAL
+  PARALLEL
+}
+
+model WorkflowDeadLetter {
+  id              String   @id @default(uuid())
+  executionId     String
+  workflowId      String
+  nodeId          String?
+  error           Json
+  input           Json
+  failedAt        DateTime @default(now())
+  retryCount      Int      @default(0)
+  status          DLQStatus @default(PENDING)
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  resolution      String?
+  
+  @@index([workflowId, status])
+  @@index([failedAt])
+}
+
+enum DLQStatus {
+  PENDING
+  INVESTIGATING
+  RESOLVED
+  IGNORED
+}
+
+// ============ SECURITY & COMPLIANCE MODELS ============
+
+model SecurityAuditLog {
+  id              String   @id @default(uuid())
+  userId          String?
+  tenantId        String
+  action          String
+  resource        String
+  resourceId      String?
+  ipAddress       String
+  userAgent       String?
+  details         Json
+  riskLevel       String   // low, medium, high, critical
+  createdAt       DateTime @default(now())
+  
+  @@index([tenantId, createdAt])
+  @@index([userId])
+  @@index([action])
+  @@index([riskLevel])
+}
+
+model SecurityIncident {
+  id              String   @id @default(uuid())
+  tenantId        String
+  title           String
+  description     String
+  severity        String   // critical, high, medium, low
+  status          String   // open, investigating, contained, resolved
+  affectedUsers   Int      @default(0)
+  affectedSystems String[]
+  timeline        Json
+  rootCause       String?
+  resolution      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  
+  @@index([tenantId, status])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+model ComplianceControl {
+  id              String   @id @default(uuid())
+  framework       String   // SOC2, GDPR, HIPAA, ISO27001
+  controlId       String
+  name            String
+  description     String
+  implementation  String
+  testingProcedure String
+  evidence        Json?
+  status          String   // compliant, non_compliant, not_applicable, pending_review
+  riskLevel       String   // low, medium, high
+  lastTested      DateTime?
+  nextTest        DateTime?
+  owner           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([framework, controlId])
+  @@index([framework])
+  @@index([status])
+}
+
+model DataSubjectRequest {
+  id              String   @id @default(uuid())
+  tenantId        String
+  requestType     String   // access, erasure, portability, correction, restriction
+  status          String   // pending, in_progress, completed, rejected
+  userId          String
+  email           String
+  details         Json
+  deadline        DateTime
+  completedAt     DateTime?
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId, status])
+  @@index([userId])
+  @@index([deadline])
+}
+
+model ConsentRecord {
+  id              String   @id @default(uuid())
+  tenantId        String
+  userId          String
+  consentType     String   // marketing, analytics, personalization, third_party, essential
+  purpose         String
+  status          String   // granted, denied, withdrawn
+  grantedAt       DateTime?
+  expiresAt       DateTime?
+  withdrawnAt     DateTime?
+  version         String   // policy version at time of consent
+  source          String   // web, mobile, api, offline
+  ipAddress       String?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId, userId])
+  @@index([consentType])
+  @@index([status])
+}
+
+model Vulnerability {
+  id              String   @id @default(uuid())
+  tenantId        String
+  title           String
+  description     String
+  severity        String   // critical, high, medium, low, info
+  cvssScore       Float
+  cvssVector      String?
+  cveId           String?  // CVE identifier if applicable
+  status          String   // open, in_progress, resolved, accepted, false_positive
+  affectedSystems String[]
+  affectedAssets  String[]
+  remediation     String?
+  workarounds     String?
+  references      String[]
+  reportedBy      String?
+  scannerType     String?  // sast, dast, pentest, manual
+  ticketId        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  resolvedAt      DateTime?
+  
+  @@index([tenantId, status])
+  @@index([severity])
+  @@index([cvssScore])
+  @@index([cveId])
+}
+
+model SecurityPolicy {
+  id              String   @id @default(uuid())
+  tenantId        String?
+  name            String
+  description     String
+  category        String   // access_control, data_protection, incident_response, change_management, vendor_management
+  content         Json
+  version         Int      @default(1)
+  status          String   // draft, active, deprecated
+  effectiveDate   DateTime
+  reviewDate      DateTime?
+  reviewedBy      String?
+  approvedBy      String?
+  approvalDate    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([category])
+  @@index([status])
+}
+
+model BusinessAssociateAgreement {
+  id              String   @id @default(uuid())
+  tenantId        String
+  vendorName      String
+  vendorId        String?
+  serviceType     String   // hosting, data_processing, analytics, support, other
+  baaStatus       String   // not_required, draft, active, expired, terminated
+  signedDate      DateTime?
+  expirationDate  DateTime?
+  terms           Json?
+  attachments     String[]
+  contactName     String?
+  contactEmail    String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId, baaStatus])
+}
+
+model PHIAccessLog {
+  id              String   @id @default(uuid())
+  tenantId        String
+  patientId       String   // User ID of data subject
+  accessorId     String   // User ID who accessed PHI
+  accessorRole   String
+  accessType      String   // view, create, update, delete, export, print
+  resourceType    String   // medical_record, prescription, lab_result, etc.
+  resourceId      String?
+  purpose        String?
+  ipAddress       String
+  userAgent       String?
+  details         Json?
+  breachDetected  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  
+  @@index([tenantId, createdAt])
+  @@index([patientId])
+  @@index([accessorId])
+  @@index([accessType])
+}
+
+model ThreatIntelligence {
+  id              String   @id @default(uuid())
+  tenantId        String
+  indicatorType   String   // ip, domain, url, hash, email, file
+  indicator       String
+  threatType      String   // malware, phishing, exploit, botnet, ransomware
+  severity        String   // critical, high, medium, low
+  source          String   // feed name or source
+  confidence      Float    // 0-1 scale
+  description     String?
+  references      String[]
+  firstSeen       DateTime
+  lastSeen        DateTime
+  expiresAt       DateTime?
+  tags            String[]
+  isBlocked       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([indicatorType, indicator])
+  @@index([threatType])
+  @@index([isBlocked])
+}
+
+model SecurityScore {
+  id              String   @id @default(uuid())
+  tenantId        String
+  overallScore    Float    // 0-100
+  category        String   // access, data, infrastructure, compliance, incidents
+  score           Float    // 0-100
+  factors         Json     // breakdown of factors affecting score
+  recommendations Json     // improvement recommendations
+  calculatedAt    DateTime @default(now())
+  periodStart     DateTime
+  periodEnd       DateTime
+  
+  @@index([tenantId, calculatedAt])
+  @@index([category])
+}
+
+// ============ ML TRAINING MODELS ============
+
+model MLModel {
+  id              String       @id @default(uuid())
+  name            String
+  type            ModelType
+  version         String
+  status          String       // training, ready, deprecated
+  baseModel       String
+  modelPath       String?
+  metrics         Json?
+  trainingData    Json?
+  hyperparameters Json?
+  trainedAt       DateTime?
+  deployedAt      DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  versions       ModelVersion[]
+  trainingJobs    TrainingJob[]
+  driftDetections DataDriftDetection[]
+  explanations   ModelExplanation[]
+}
+
+model ModelVersion {
+  id              String     @id @default(uuid())
+  modelId         String
+  version         String
+  description     String?
+  metrics         Json?
+  changelog       String?
+  isActive        Boolean    @default(false)
+  deployedAt      DateTime?
+  deprecatedAt    DateTime?
+  createdAt       DateTime   @default(now())
+  
+  model           MLModel    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+model ABTest {
+  id              String        @id @default(uuid())
+  name            String
+  modelAId        String
+  modelBId        String
+  trafficSplit    Json          // {modelA: 50, modelB: 50}
+  startDate       DateTime
+  endDate         DateTime?
+  status          String        // running, completed, stopped
+  results         Json?
+  winner          String?
+  confidence      Float?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model TrainingJob {
+  id              String     @id @default(uuid())
+  modelId         String
+  status          String     // pending, running, completed, failed
+  progress        Float      // 0-100
+  startedAt       DateTime
+  completedAt     DateTime?
+  errorMessage    String?
+  cost            Float?
+  createdAt       DateTime   @default(now())
+  
+  model           MLModel    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+model DataDriftDetection {
+  id              String     @id @default(uuid())
+  modelId         String
+  metricName      String
+  baselineValue   Float
+  currentValue    Float
+  driftDetected   Boolean
+  severity        String?
+  detectedAt      DateTime   @default(now())
+  
+  model           MLModel    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+model ModelExplanation {
+  id              String     @id @default(uuid())
+  modelId         String
+  predictionId    String
+  explanationType String     // shap, lime, attention
+  explanation     Json
+  generatedAt     DateTime   @default(now())
+  
+  model           MLModel    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+}
+
+enum ModelType {
+  MATCHING
+  RESUME_OPTIMIZATION
+  NLU
+  VISION
+  RECOMMENDATION
+  RL_AGENT
+}
+
+// ============ ENTERPRISE INTEGRATIONS MODELS ============
+
+model ERPConnection {
+  id              String   @id @default(uuid())
+  tenantId        String
+  provider        String   // sap, oracle, dynamics
+  config          Json     // connection settings
+  authConfig      Json     // credentials (encrypted)
+  status          String   // active, inactive, error
+  lastSync        DateTime?
+  syncFrequency   String   @default("hourly")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId, provider])
+}
+
+model CRMConnection {
+  id              String   @id @default(uuid())
+  tenantId        String
+  provider        String   // salesforce, hubspot, zoho
+  config          Json
+  authConfig      Json
+  status          String
+  lastSync        DateTime?
+  syncFrequency   String   @default("realtime")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId, provider])
+}
+
+model CorporateLMSConnection {
+  id              String   @id @default(uuid())
+  tenantId        String
+  provider        String   // workday, cornerstone, sap_sf
+  config          Json
+  authConfig      Json
+  status          String
+  courseCatalog   Json?
+  lastSync        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId, provider])
+}
+
+model TalentManagementSync {
+  id              String   @id @default(uuid())
+  tenantId        String
+  syncType        String   // succession, performance, compensation
+  status          String
+  recordsProcessed Int
+  errors          Json?
+  startedAt       DateTime
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  
+  @@index([tenantId, syncType])
+}
+
+model EnterpriseAPIConfig {
+  id              String   @id @default(uuid())
+  tenantId        String
+  rateLimit       Json     // {requests_per_minute: 1000}
+  authProviders   Json     // [{type: "oauth2", config: {...}}]
+  transformations Json     // Request/response transforms
+  apiVersions     Json     // Supported versions
+  documentation   String?  // OpenAPI spec URL
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId])
+}
+
+model LegacySystemConnection {
+  id              String   @id @default(uuid())
+  tenantId        String
+  systemName      String
+  protocol        String   // ftp, sftp, soap, rest
+  config          Json     // Connection and protocol settings
+  mappings        Json     // Field mappings
+  status          String
+  lastSync        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenantId, systemName])
+}
+
+model DataSyncLog {
+  id              String   @id @default(uuid())
+  connectionId    String
+  connectionType  String   // erp, crm, lms, talent, legacy
+  syncType        String   // full, incremental
+  status          String   // success, partial, failed
+  recordsRead     Int
+  recordsWritten  Int
+  errors          Json?
+  startedAt       DateTime
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  
+  @@index([connectionId, status])
+  @@index([connectionType, createdAt])
+}
+

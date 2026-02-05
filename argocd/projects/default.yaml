@@ -1,0 +1,106 @@
+# =============================================================================
+# ArgoCD Project Definition - Sprint 38
+# =============================================================================
+
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: Default project for Apply-as-a-Service platform
+  
+  # Source repositories
+  sourceRepos:
+    - 'https://github.com/*/apply-as-a-service'
+    - 'git@github.com:*/*/apply-as-a-service.git'
+    - https://github.com/brooketogo98/SimpleAsThat.git
+    - 'https://*'
+    - 'git@*:*'
+  
+  # Destination servers
+  destinations:
+    - namespace: '*'
+      server: 'https://kubernetes.default.svc'
+    - namespace: dev
+      server: 'https://kubernetes.default.svc'
+    - namespace: staging
+      server: 'https://kubernetes.default.svc'
+    - namespace: prod
+      server: 'https://kubernetes.default.svc'
+    - namespace: sandbox
+      server: 'https://kubernetes.default.svc'
+    - namespace: dr
+      server: 'https://kubernetes.default.svc'
+  
+  # Cluster resource allow list
+  clusterResourceWhitelist:
+    - group: ''
+      kind: '*'
+    - group: 'apps'
+      kind: '*'
+    - group: 'networking.k8s.io'
+      kind: '*'
+    - group: 'autoscaling'
+      kind: '*'
+    - group: 'monitoring.coreos.com'
+      kind: '*'
+  
+  # Namespace resource deny list
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: '*'
+    - group: 'apps'
+      kind: '*'
+  
+  # Roles for self-service
+  roles:
+    - name: admin
+      description: Admin role for the project
+      policies:
+        - p, proj:default:admin, *, *, *, *
+      groups:
+        - ArgoCD-admins
+        - platform-team
+  
+  - name: dev-admin
+    description: Dev environment admin
+    policies:
+      - p, proj:default:dev-admin, applications, *, dev/*, allow
+      - p, proj:default:dev-admin, applications, *, get/*, allow
+    groups:
+      - dev-team
+  
+  - name: staging-admin
+    description: Staging environment admin
+    policies:
+      - p, proj:default:staging-admin, applications, *, staging/*, allow
+      - p, proj:default:staging-admin, applications, *, get/*, allow
+    groups:
+      - dev-team
+      - qa-team
+  
+  - name: prod-admin
+    description: Production environment admin (requires approval)
+    policies:
+      - p, proj:default:prod-admin, applications, *, prod/*, allow
+      - p, proj:default:prod-admin, applications, *, get/*, allow
+    groups:
+      - platform-team
+      - dev-lead
+  
+  # Resource ignore rules
+  ignoreMissingSchemas: true
+  
+  # Sync options
+  syncOptions:
+    - CreateNamespace=true
+    - Prune=true
+    - PrunePropagationPolicy=foreground
+    - ApplyOutOfSyncOnly=false
+  
+  # Signature keys for commit verification
+  signatureKeys:
+    - keyID: 1D4C6A8B

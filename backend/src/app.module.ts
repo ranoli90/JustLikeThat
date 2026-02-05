@@ -53,6 +53,15 @@ import { NetworkingOpportunity } from './entities/networking-opportunity.entity'
 import { OutreachModule } from './modules/outreach/outreach.module';
 import { PerformanceModule } from './modules/performance/performance.module';
 import { SecurityModule } from './modules/security/security.module';
+import { EnterpriseAiModule } from './modules/enterprise-ai/enterprise-ai.module';
+import { GeneratedResume } from './modules/enterprise-ai/entities/generated-resume.entity';
+import { CoverLetter } from './modules/enterprise-ai/entities/cover-letter.entity';
+import { JobDescription } from './modules/enterprise-ai/entities/job-description.entity';
+import { CareerPath } from './modules/enterprise-ai/entities/career-path.entity';
+import { NegotiationSession } from './modules/enterprise-ai/entities/negotiation-session.entity';
+import { InterviewSession } from './modules/enterprise-ai/entities/interview-session.entity';
+import { ResumeTemplate } from './modules/enterprise-ai/entities/resume-template.entity';
+import { CareerCoachingModule } from './modules/career-coaching/career-coaching.module';
 
 @Module({
   imports: [
@@ -108,9 +117,17 @@ import { SecurityModule } from './modules/security/security.module';
           CompanyInsider,
           WarmIntroRequest,
           NetworkingOpportunity,
+          GeneratedResume,
+          CoverLetter,
+          JobDescription,
+          CareerPath,
+          NegotiationSession,
+          InterviewSession,
+          ResumeTemplate,
+          CareerCoachingModule,
         ],
-        synchronize: true, // Set to false in production
-        logging: true,
+        synchronize: configService.get<string>('NODE_ENV') !== 'production',
+        logging: configService.get<string>('NODE_ENV') !== 'production',
       }),
       inject: [ConfigService],
     }),
@@ -131,6 +148,8 @@ import { SecurityModule } from './modules/security/security.module';
     OutreachModule,
     PerformanceModule,
     SecurityModule,
+    EnterpriseAiModule,
+    CareerCoachingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

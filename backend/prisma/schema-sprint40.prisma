@@ -1,0 +1,380 @@
+// ============ SPRINT 40: PARTNER INTEGRATION ECOSYSTEM ============
+
+// Extended Integration Provider Enum
+enum IntegrationProvider {
+  // Original providers
+  SLACK
+  DISCORD
+  TEAMS
+  ZAPIER
+  WEBHOOK
+  HUBSPOT
+  SALESFORCE
+  ZENDESK
+  JIRA
+  CUSTOM
+  
+  // Job Boards (Sprint 40)
+  LINKEDIN
+  INDEED
+  GLASSDOOR
+  REMOTE_CO
+  ANGEL_LIST
+  DICE
+  
+  // ATS Platforms (Sprint 40)
+  GREENHOUSE
+  LEVER
+  WORKDAY_ATS
+  BULLHORN
+  ICIMS
+  SMART_RECRUITERS
+  
+  // HRIS Systems (Sprint 40)
+  WORKDAY_HCM
+  BAMBOOHR
+  ADP
+  SAP_SUCCESSFACTORS
+  PEOPLESOFT
+  ORACLE_HCM
+  
+  // Background Check Providers (Sprint 40)
+  CHECKR
+  GOODHIRE
+  HIRERIGHT
+  STERLING
+  ACCURATE
+  
+  // Interview Scheduling (Sprint 40)
+  CALENDLY
+  MICROSOFT_BOOKINGS
+  GOOGLE_CALENDAR
+  
+  // Learning Management Systems (Sprint 40)
+  LINKEDIN_LEARNING
+  UDEMY_BUSINESS
+  COURSERA
+  SKILLSOFT
+  PLURALSIGHT
+  
+  // SSO Providers (Sprint 40)
+  OKTA
+  AZURE_AD
+  GOOGLE_WORKSPACE
+  ONELOGIN
+  PING_IDENTITY
+  AUTH0
+}
+
+enum IntegrationType {
+  JOB_BOARD
+  ATS
+  HRIS
+  BACKGROUND_CHECK
+  SCHEDULING
+  LMS
+  TEAM_CHAT
+  SSO
+  WEBHOOK
+  CRM
+}
+
+enum IntegrationStatus {
+  PENDING      // Initial setup, not connected
+  CONNECTING   // In the process of connecting
+  ACTIVE       // Successfully connected and working
+  SYNCING      // Currently syncing data
+  ERROR        // Error state, requires attention
+  DISABLED     // Manually disabled
+  DELETED      // No longer used
+}
+
+enum SyncType {
+  FULL         // Full sync of all data
+  INCREMENTAL  // Only changes since last sync
+  MANUAL       // Manually triggered sync
+}
+
+enum SyncStatus {
+  IDLE
+  SYNCING
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+// Integration Configuration Model
+model IntegrationConfig {
+  id              String            @id @default(uuid())
+  integrationType IntegrationType
+  providerName    String
+  tenantId        String
+  
+  // Encrypted credentials
+  credentials     Json?             // API keys, OAuth tokens (encrypted at rest)
+  
+  // Connection settings
+  settings        Json?             // Provider-specific settings
+  fieldMappings   Json?             // Custom field mappings
+  
+  // Sync configuration
+  syncEnabled     Boolean           @default(true)
+  syncFrequency   String            @default("hourly") // realtime, hourly, daily, manual
+  lastSync        DateTime?
+  nextSync        DateTime?
+  
+  // Status tracking
+  status          IntegrationStatus @default(PENDING)
+  errorMessage    String?
+  errorDetails    Json?
+  
+  // Webhook configuration
+  webhookUrl      String?
+  webhookSecret   String?
+  webhookEvents   String[]
+  
+  // Audit fields
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  createdBy       String?
+  
+  // Relations
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  syncLogs        IntegrationSyncLog[]
+  webhookLogs     PartnerWebhookLog[]
+  
+  @@unique([tenantId, integrationType, providerName])
+  @@index([tenantId, status])
+  @@index([integrationType])
+}
+
+// Integration Field Mapping
+model IntegrationMapping {
+  id              String   @id @default(uuid())
+  configId        String
+  localField      String   // Field in our system
+  externalField   String   // Field in external system
+  transform       String?  // Transformation function (e.g., "uppercase", "date_format")
+  isRequired     Boolean  @default(false)
+  defaultValue    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  config          IntegrationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  
+  @@index([configId])
+}
+
+// Integration Sync Log
+model IntegrationSyncLog {
+  id              String     @id @default(uuid())
+  configId        String
+  syncType        SyncType
+  
+  // Status
+  status          SyncStatus
+  recordsProcessed Int       @default(0)
+  recordsCreated  Int       @default(0)
+  recordsUpdated  Int       @default(0)
+  recordsFailed   Int       @default(0)
+  
+  // Error tracking
+  errors          Json?
+  errorMessage    String?
+  
+  // Timing
+  startedAt       DateTime
+  completedAt     DateTime?
+  duration        Int?      // in milliseconds
+  
+  // Metadata
+  metadata        Json?      // Additional sync metadata
+  
+  config          IntegrationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  
+  @@index([configId, startedAt])
+  @@index([status])
+}
+
+// Partner Webhook Log
+model PartnerWebhookLog {
+  id              String   @id @default(uuid())
+  configId        String
+  provider        String
+  eventType       String
+  eventId         String?  // External event ID
+  
+  // Request details
+  endpoint        String
+  headers         Json?
+  payload         Json?
+  
+  // Processing status
+  status          String   // received, processed, failed, ignored
+  processingTime  Int?     // milliseconds
+  
+  // Error details
+  errorMessage    String?
+  errorDetails    Json?
+  
+  // Response
+  responseStatus  Int?
+  responseBody    Json?
+  
+  receivedAt      DateTime @default(now())
+  processedAt     DateTime?
+  
+  config          IntegrationConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  
+  @@index([configId, receivedAt])
+  @@index([provider, eventType])
+}
+
+// Job Board User Credentials (OAuth tokens, etc.)
+model JobBoardCredential {
+  id              String   @id @default(uuid())
+  userId          String
+  provider        JobBoardProvider
+  integrationId   String?  // Optional link to IntegrationConfig
+  
+  // OAuth tokens (encrypted)
+  accessToken     String   // encrypted
+  refreshToken    String?  // encrypted
+  expiresAt       DateTime?
+  
+  // Scope and permissions
+  scope           String?
+  permissions     String[]
+  
+  // Profile info from provider
+  externalId      String?
+  externalEmail   String?
+  profileUrl      String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  lastUsedAt      DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([userId, provider])
+  @@index([provider])
+}
+
+enum JobBoardProvider {
+  LINKEDIN
+  INDEED
+  GLASSDOOR
+  REMOTE_CO
+  ANGEL_LIST
+  DICE
+}
+
+// ATS Application Sync
+model ATSApplication {
+  id              String   @id @default(uuid())
+  configId        String
+  externalId      String   // ID in the ATS system
+  applicationId   String   // Our internal application ID
+  
+  // Sync metadata
+  lastSyncedAt    DateTime?
+  syncStatus      String   // synced, pending, failed
+  
+  createdAt       DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@unique([configId, externalId])
+  @@index([applicationId])
+}
+
+// Background Check Records
+model BackgroundCheckRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  configId        String
+  externalId      String   // ID in background check provider
+  
+  // Check details
+  checkType       String
+  status          String   // pending, in_progress, completed, failed
+  
+  // Results
+  resultUrl       String?
+  resultData      Json?
+  
+  // Invitation
+  invitedAt       DateTime?
+  completedAt     DateTime?
+  expiresAt       DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId, status])
+}
+
+// Interview Scheduling Records
+model InterviewSchedule {
+  id              String   @id @default(uuid())
+  userId          String
+  configId        String
+  externalId      String?
+  
+  // Interview details
+  interviewType   String
+  scheduledAt     DateTime
+  duration        Int      // minutes
+  timezone        String
+  
+  // Location/Link
+  location        String?
+  meetingUrl      String?
+  
+  // Calendar info
+  calendarEventId String?
+  calendarLink   String?
+  
+  // Status
+  status          String   // scheduled, completed, cancelled, no_show
+  
+  // Reminders
+  reminders       Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId, scheduledAt])
+}
+
+// LMS Learning Records
+model LearningRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  configId        String
+  externalId      String
+  
+  // Course details
+  courseId        String
+  courseName      String
+  provider        String
+  
+  // Progress
+  progress        Float    // 0-100
+  status          String   // not_started, in_progress, completed
+  
+  // Completion
+  startedAt       DateTime?
+  completedAt     DateTime?
+  score           Float?
+  
+  // Certificate
+  certificateUrl  String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([userId, courseId])
+  @@index([status])
+}
