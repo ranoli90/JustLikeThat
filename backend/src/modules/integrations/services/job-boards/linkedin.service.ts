@@ -154,7 +154,7 @@ export class LinkedInService {
             id: profile.id,
             firstName: profile.firstName?.localized?.en_US,
             lastName: profile.lastName?.localized?.en_US,
-            email: profile.email?.elements?.[0]?.handle~,
+            email: profile.email?.elements?.[0]?.handle?.['email-address'] ?? null,
           },
         },
       };

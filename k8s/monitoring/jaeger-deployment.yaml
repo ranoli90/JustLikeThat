@@ -30,6 +30,14 @@ spec:
               name: collector-grpc
             - containerPort: 14269
               name: metrics
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: COLLECTOR_OTLP_ENABLED
               value: "true"

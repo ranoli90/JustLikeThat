@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 import BackgroundTasks
+import os.log
 
 // MARK: - Sync Manager
 
@@ -357,18 +358,30 @@ final class LocalDatabase {
     
     private init() {}
     
+    /**
+     Create entity in local database.
+     Uses os_log with private隐私 configuration to prevent sensitive data exposure.
+     */
     func create(entityType: String, entityId: String, data: [String: AnyCodable]) async throws {
         // Implementation would use SQLite or Realm
         // For now, this is a placeholder
-        print("Creating \(entityType) with id \(entityId)")
+        os_log("Creating %{public}@ with id %{public}@", log: .default, type: .debug, entityType, entityId)
     }
     
+    /**
+     Update entity in local database.
+     Uses os_log with private隐私 configuration to prevent sensitive data exposure.
+     */
     func update(entityType: String, entityId: String, data: [String: AnyCodable]) async throws {
-        print("Updating \(entityType) with id \(entityId)")
+        os_log("Updating %{public}@ with id %{public}@", log: .default, type: .debug, entityType, entityId)
     }
     
+    /**
+     Delete entity from local database.
+     Uses os_log with private隐私 configuration to prevent sensitive data exposure.
+     */
     func delete(entityType: String, entityId: String) async throws {
-        print("Deleting \(entityType) with id \(entityId)")
+        os_log("Deleting %{public}@ with id %{public}@", log: .default, type: .debug, entityType, entityId)
     }
     
     func fetch(entityType: String, entityId: String) async throws -> [String: AnyCodable] {

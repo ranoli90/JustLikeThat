@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Persona, ExperienceLevel } from '../../entities/persona.entity';
 import { JobPosting, RemotePreference } from '../../entities/job-posting.entity';
 import { UserPreferences } from '../../entities/user-preferences.entity';
 
+/**
+ * Breakdown of match score components
+ */
 export interface MatchScoreBreakdown {
   skills: number;
   experience: number;
@@ -14,6 +17,9 @@ export interface MatchScoreBreakdown {
   constraints: number;
 }
 
+/**
+ * Result of matching a persona to a job posting
+ */
 export interface MatchResult {
   jobPostingId: string;
   personaId: string;
@@ -22,18 +28,27 @@ export interface MatchResult {
   thresholdMet: boolean;
 }
 
-// Loose helper types for flexible incoming shapes
-// without forcing knowledge of full entity schemas here
-// while still avoiding `any` propagation.
+/**
+ * Salary range interface for flexible matching
+ */
 interface SalaryRangeLike {
   min?: number | null;
   max?: number | null;
 }
 
+/**
+ * Flexible skill type for matching
+ */
 type SkillLike = string | { name?: string | null } | null | undefined;
 
-// Default weights moved to a single config object for easier tuning.
-// Keep culture/constraints as 0 until properly implemented to avoid skewing scores.
+/**
+ * Weight configuration keys for match scoring
+ */
+type WeightKeys = keyof typeof DEFAULT_WEIGHTS;
+
+/**
+ * Default weights for match score components
+ */
 const DEFAULT_WEIGHTS = Object.freeze({
   skills: 0.55,
   experience: 0.2,
@@ -43,13 +58,20 @@ const DEFAULT_WEIGHTS = Object.freeze({
   constraints: 0,
 });
 
-type WeightKeys = keyof typeof DEFAULT_WEIGHTS;
-
+/**
+ * Service for matching personas to job postings with relevance scoring
+ */
 @Injectable()
 export class MatchingService {
+  private readonly logger = new Logger(MatchingService.name);
   private readonly MIN_RELEVANCE_SCORE: number;
   private readonly WEIGHTS: Readonly<Record<WeightKeys, number>>;
 
+  /**
+   * Creates a new MatchingService instance
+   * @param personaRepository - Repository for personas
+   * @param jobPostingRepository - Repository for job postings
+   */
   constructor(
     @InjectRepository(Persona)
     private readonly personaRepository: Repository<Persona>,
@@ -64,7 +86,10 @@ export class MatchingService {
     this.assertValidWeights(this.WEIGHTS);
   }
 
-  // Ensure weights are sane to avoid silent scoring bugs.
+  /**
+   * Ensures weights are valid to avoid silent scoring bugs
+   * @param weights - The weight configuration to validate
+   */
   private assertValidWeights(weights: Record<WeightKeys, number>): void {
     const sum = Object.values(weights).reduce((a, b) => a + b, 0);
     // Allow small FP error
@@ -73,8 +98,7 @@ export class MatchingService {
       const normalized = Object.fromEntries(
         (Object.keys(weights) as WeightKeys[]).map(k => [k, weights[k] / sum]),
       ) as Record<WeightKeys, number>;
-      // eslint-disable-next-line no-console
-      console.warn(
+      this.logger.warn(
         `MatchingService: weights did not sum to 1. Normalizing automatically. Original sum=${sum}`,
       );
       this.WEIGHTS = Object.freeze(normalized);

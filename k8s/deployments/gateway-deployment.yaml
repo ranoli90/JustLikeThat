@@ -41,6 +41,14 @@ spec:
               name: http
             - containerPort: 50051
               name: grpc
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: NODE_ENV
               value: "production"

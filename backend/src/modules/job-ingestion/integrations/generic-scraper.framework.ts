@@ -3,6 +3,27 @@ import { BaseJobSource, JobSourceConfig, SearchParams, SearchResult, RawJobData 
 import { JobSourceCategory, ComplianceLevel, SourceReliability, CostEffectiveness } from '../../../entities/job-source.entity';
 import { JobPosting } from '../../../entities/job-posting.entity';
 
+// Pre-compiled safe regex patterns for common job scraping patterns
+const SAFE_JOB_LIST_PATTERNS = [
+  /<li[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/li>/gi,
+  /<div[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+  /<article[^>]*class="[^"]*job[^"]*"[^>]*>([\s\S]*?)<\/article>/gi,
+];
+
+// Validation function for regex patterns to prevent ReDoS
+function isSafeRegexPattern(pattern: string): boolean {
+  // Check for potentially malicious patterns
+  const dangerPatterns = [
+    /.{200,}/, // Too long
+    /(\\S+){10,}/, // Excessive repetition
+    /(\\([^)]*\\)){5,}/, // Nested groups
+    /\[[^\]]*\]{5,}/, // Nested character classes
+    /\{[^}]*\}{5,}/, // Nested quantifiers
+  ];
+  
+  return !dangerPatterns.some(p => p.test(pattern));
+}
+
 export interface ScraperConfig {
   name: string;
   baseUrl: string;
@@ -146,11 +167,20 @@ export class GenericScraperIntegration extends BaseJobSource {
   private parseJobs(html: string, config: ScraperConfig): RawJobData[] {
     const jobs: RawJobData[] = [];
     
-    // Simple regex-based parsing - in production, use a proper HTML parser
-    const jobListRegex = new RegExp(config.selectors.jobList, 'gi');
+    // Use pre-compiled safe regex pattern for job list parsing
+    const jobListPattern = this.getSafeJobListPattern(config.selectors.jobList);
+    if (!jobListPattern) {
+      return jobs;
+    }
+    
     let match;
     
-    while ((match = jobListRegex.exec(html)) !== null) {
+    // Limit iterations to prevent ReDoS
+    const maxIterations = 100;
+    let iterations = 0;
+    
+    while ((match = jobListPattern.exec(html)) !== null && iterations < maxIterations) {
+      iterations++;
       const jobHtml = match[1] || match[0];
       const job = this.parseJobElement(jobHtml, config);
       if (job) {
@@ -159,6 +189,28 @@ export class GenericScraperIntegration extends BaseJobSource {
     }
 
     return jobs;
+  }
+
+  private getSafeJobListPattern(selector: string): RegExp | null {
+    // Check if selector is a pre-defined safe pattern
+    const safePattern = SAFE_JOB_LIST_PATTERNS.find(p => p.source === selector);
+    if (safePattern) {
+      return safePattern;
+    }
+    
+    // Validate and create safe regex from selector
+    if (selector.startsWith('/') && selector.endsWith('/')) {
+      const regexPattern = selector.slice(1, -1);
+      if (isSafeRegexPattern(regexPattern)) {
+        try {
+          return new RegExp(regexPattern, 'gi');
+        } catch {
+          return null;
+        }
+      }
+    }
+    
+    return null;
   }
 
   private parseJobElement(jobHtml: string, config: ScraperConfig): RawJobData | null {
@@ -210,17 +262,34 @@ export class GenericScraperIntegration extends BaseJobSource {
     };
   }
 
-  private extractField(html: string, selector: string): string | null {
+   private extractField(html: string, selector: string): string | null {
     // Handle both CSS selectors and regex patterns
     if (selector.startsWith('/') && selector.endsWith('/')) {
-      const regex = new RegExp(selector.slice(1, -1), 'i');
-      const match = html.match(regex);
-      return match ? match[1] || match[0] : null;
+      const regexPattern = selector.slice(1, -1);
+      try {
+        // Validate regex pattern to prevent ReDoS
+        if (!isSafeRegexPattern(regexPattern)) {
+          return null;
+        }
+        
+        const regex = new RegExp(regexPattern, 'i');
+        // Limit the test input length to prevent ReDoS
+        const testInput = html.slice(0, 2000);
+        const match = testInput.match(regex);
+        return match ? match[1] || match[0] : null;
+      } catch {
+        return null;
+      }
     }
 
     // Simple tag-based extraction
-    const tagMatch = html.match(new RegExp(`<[^>]*class="[^"]*${selector}[^"]*"[^>]*>([^<]*)</[^>]*>`, 'i'));
-    return tagMatch ? tagMatch[1] : null;
+    try {
+      const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const tagMatch = html.match(new RegExp(`<[^>]*class="[^"]*${escapedSelector}[^"]*"[^>]*>([^<]*)</[^>]*>`, 'i'));
+      return tagMatch ? tagMatch[1] : null;
+    } catch {
+      return null;
+    }
   }
 
   private cleanText(text: string): string {

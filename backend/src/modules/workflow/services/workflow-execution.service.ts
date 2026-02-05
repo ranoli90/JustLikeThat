@@ -625,10 +625,17 @@ export class WorkflowExecutionService {
     
     let current = obj;
     for (const key of keys) {
+      // Prevent prototype pollution
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        return;
+      }
       current = current[key] = current[key] || {};
     }
     
-    current[lastKey!] = value;
+    // Prevent prototype pollution for last key
+    if (lastKey !== '__proto__' && lastKey !== 'constructor' && lastKey !== 'prototype') {
+      current[lastKey!] = value;
+    }
   }
 
   private formatError(error: any): ExecutionError {

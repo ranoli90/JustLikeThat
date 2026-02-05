@@ -5,9 +5,37 @@ import { CandidateProfile } from '../../entities/candidate-profile.entity';
 import { Resume } from '../../entities/resume.entity';
 import { UpdateProfileDto } from '../../dto/profile/update-profile.dto';
 import { CreateResumeDto } from '../../dto/resume/create-resume.dto';
+import { Persona } from '../../entities/persona.entity';
+import { PaginatedResponse, PaginationQuery } from '../../common/utils';
 
+/**
+ * Profile query parameters
+ */
+export interface ProfileQuery extends PaginationQuery {}
+
+/**
+ * Persona entity interface
+ */
+export interface PersonaData {
+  id: string;
+  name: string;
+  description: string;
+  skills: string[];
+  experience: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/**
+ * Service for managing candidate profiles, resumes, and personas
+ */
 @Injectable()
 export class ProfileService {
+  /**
+   * Creates a new ProfileService instance
+   * @param profileRepository - Repository for candidate profiles
+   * @param resumeRepository - Repository for resumes
+   */
   constructor(
     @InjectRepository(CandidateProfile)
     private profileRepository: Repository<CandidateProfile>,
@@ -15,8 +43,13 @@ export class ProfileService {
     private resumeRepository: Repository<Resume>,
   ) {}
 
-  async getCurrentUserResumes(userId: string, query: any): Promise<any> {
-    // Implementation with pagination
+  /**
+   * Retrieves paginated resumes for a user
+   * @param userId - The user ID
+   * @param query - Pagination query parameters
+   * @returns Paginated list of resumes
+   */
+  async getCurrentUserResumes(userId: string, query: ProfileQuery = {}): Promise<PaginatedResponse<Resume>> {
     const { page = 1, size = 10 } = query;
     const skip = (page - 1) * size;
     const [data, total] = await this.resumeRepository.findAndCount({
@@ -27,53 +60,73 @@ export class ProfileService {
     return {
       data,
       pagination: {
-        page: parseInt(page),
-        size: parseInt(size),
+        page: Number(page),
+        size: Number(size),
         total,
         pages: Math.ceil(total / size),
       },
     };
   }
 
-  async uploadResume(userId: string, uploadDto: any): Promise<any> {
-    // Implementation for resume upload
+  /**
+   * Uploads a new resume for a user
+   * @param userId - The user ID
+   * @param uploadDto - Resume upload data
+   * @returns The created resume
+   */
+  async uploadResume(userId: string, uploadDto: Partial<Resume>): Promise<Resume> {
     const resume = this.resumeRepository.create({
       ...uploadDto,
       user: { id: userId },
     });
-    const savedResume = await this.resumeRepository.save(resume);
-    return savedResume;
+    return this.resumeRepository.save(resume);
   }
 
-  async getCurrentUserPersonas(userId: string, query: any): Promise<any> {
-    // Implementation with pagination
+  /**
+   * Retrieves paginated personas for a user
+   * @param userId - The user ID
+   * @param query - Pagination query parameters
+   * @returns Paginated list of personas
+   */
+  async getCurrentUserPersonas(userId: string, query: ProfileQuery = {}): Promise<PaginatedResponse<PersonaData>> {
     const { page = 1, size = 10 } = query;
     const skip = (page - 1) * size;
     // Since personas aren't in the current TypeORM entities, return mock data
-    const data = [];
+    const data: PersonaData[] = [];
     const total = 0;
     return {
       data,
       pagination: {
-        page: parseInt(page),
-        size: parseInt(size),
+        page: Number(page),
+        size: Number(size),
         total,
         pages: Math.ceil(total / size),
       },
     };
   }
 
-  async getPersonaById(userId: string, personaId: string): Promise<any> {
-    // Implementation to get persona by ID
+  /**
+   * Retrieves a specific persona by ID
+   * @param userId - The user ID
+   * @param personaId - The persona ID
+   * @returns The persona
+   * @throws NotFoundException if persona not found
+   */
+  async getPersonaById(userId: string, personaId: string): Promise<PersonaData> {
     throw new NotFoundException('Persona not found');
   }
 
-  async createPersona(userId: string, createPersonaDto: any): Promise<any> {
-    // Implementation to create persona
+  /**
+   * Creates a new persona
+   * @param userId - The user ID
+   * @param createPersonaDto - Persona creation data
+   * @returns The created persona
+   */
+  async createPersona(userId: string, createPersonaDto: Partial<PersonaData>): Promise<PersonaData> {
     return {
       id: 'mock-persona-id',
       ...createPersonaDto,
-    };
+    } as PersonaData;
   }
 
   async updatePersona(userId: string, personaId: string, updatePersonaDto: any): Promise<any> {

@@ -90,6 +90,53 @@ resource "aws_db_parameter_group" "main" {
 }
 
 # =============================================================================
+# KMS Key for RDS Encryption
+# =============================================================================
+
+resource "aws_kms_key" "rds_key" {
+  description             = "KMS key for RDS encryption and Performance Insights"
+  enable_key_rotation     = true
+  deletion_window_in_days  = 30
+
+  key_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM policies for key management"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${var.account_id}:root"
+        }
+        Action = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow RDS to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = "rds.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.app_name}-rds-key-${var.environment}"
+    Environment = var.environment
+    Project     = var.app_name
+    ManagedBy   = "terraform"
+    Sprint      = "38"
+  }
+}
+
+# =============================================================================
 # RDS Instance - Primary
 # =============================================================================
 
@@ -102,6 +149,7 @@ resource "aws_db_instance" "main" {
   allocated_storage  = var.allocated_storage
   storage_encrypted  = true
   storage_type       = var.storage_type
+  kms_key_id        = aws_kms_key.rds_key.arn
 
   # Network
   vpc_security_group_ids = [var.security_group_id]
@@ -128,6 +176,7 @@ resource "aws_db_instance" "main" {
   # Performance
   performance_insights_enabled          = var.performance_insights_enabled
   performance_insights_retention_period = var.performance_insights_retention
+  performance_insights_kms_key_id       = aws_kms_key.rds_key.arn
   monitoring_interval                   = var.monitoring_interval
   monitoring_role_arn                   = var.enable_enhanced_monitoring ? aws_iam_role.rds_monitoring.arn : null
 

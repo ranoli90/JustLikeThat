@@ -6,8 +6,16 @@ import { UserPreferences } from '../../entities/user-preferences.entity';
 import { UpdateUserDto } from '../../dto/user/update-user.dto';
 import { UpdateUserPreferencesDto } from '../../dto/user/update-preferences.dto';
 
+/**
+ * Service for managing user profiles and preferences
+ */
 @Injectable()
 export class UserService {
+  /**
+   * Creates a new UserService instance
+   * @param userRepository - Repository for user entities
+   * @param preferencesRepository - Repository for user preferences
+   */
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
@@ -15,6 +23,12 @@ export class UserService {
     private preferencesRepository: Repository<UserPreferences>,
   ) {}
 
+  /**
+   * Retrieves the current user's profile
+   * @param userId - The user ID
+   * @returns The user entity
+   * @throws NotFoundException if user not found
+   */
   async getCurrentUser(userId: string): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
@@ -23,12 +37,24 @@ export class UserService {
     return user;
   }
 
+  /**
+   * Updates the current user's profile
+   * @param userId - The user ID
+   * @param updateUserDto - The update data
+   * @returns The updated user entity
+   */
   async updateCurrentUser(userId: string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.getCurrentUser(userId);
     Object.assign(user, updateUserDto);
     return this.userRepository.save(user);
   }
 
+  /**
+   * Retrieves the current user's preferences
+   * @param userId - The user ID
+   * @returns The user preferences entity
+   * @throws NotFoundException if preferences not found
+   */
   async getCurrentUserPreferences(userId: string): Promise<UserPreferences> {
     const preferences = await this.preferencesRepository.findOne({
       where: { user: { id: userId } },
@@ -39,6 +65,12 @@ export class UserService {
     return preferences;
   }
 
+  /**
+   * Updates the current user's preferences
+   * @param userId - The user ID
+   * @param updatePreferencesDto - The preferences update data
+   * @returns The updated user preferences entity
+   */
   async updateCurrentUserPreferences(
     userId: string,
     updatePreferencesDto: UpdateUserPreferencesDto,

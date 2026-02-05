@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { ConfigService } from '@nestjs/config';
-import { createGzip, createBrotliCompress, createDeflate } from 'zlib';
+import { createGzip, createBrotliCompress, createDeflate, gzipSync, brotliCompressSync, deflateSync } from 'zlib';
 import { promisify } from 'util';
 import { pipeline } from 'stream';
 
 const gzip = promisify(createGzip);
-const brotli = promisify(createBrotliCompress());
-const deflate = promisify(createDeflate());
+const brotli = promisify(createBrotliCompress);
+const deflate = promisify(createDeflate);
 
 interface CompressionOptions {
   threshold: number;
@@ -158,10 +158,24 @@ export class CompressionService {
   /**
    * Check if path should be excluded from compression
    */
-  private shouldExcludePath(path: string, excludePaths: string[]): boolean {
-    return excludePaths.some(excludePath => 
-      path.startsWith(excludePath) || path.match(new RegExp(excludePath.replace('*', '.*')))
-    );
+   private shouldExcludePath(path: string, excludePaths: string[]): boolean {
+    return excludePaths.some(excludePath => {
+      // Handle simple wildcard patterns securely
+      if (excludePath.includes('*')) {
+        // FIX: Chain replace calls to handle all wildcards properly
+        const regexPattern = excludePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*');
+        try {
+          // Validate regex pattern to prevent ReDoS
+          if (/.*(\([^)]*\)){10,}.*|.*(\[[^\]]*\]){10,}.*|.*(\{[^\}]*\}){10,}.*|.*(\*|\+|\?){5,}.*|.*(a+|b+|c+){5,}.*|.*(\s|.){200,}.*/.test(regexPattern)) {
+            return false;
+          }
+          return new RegExp(regexPattern).test(path);
+        } catch {
+          return false;
+        }
+      }
+      return path.startsWith(excludePath);
+    });
   }
 
   /**

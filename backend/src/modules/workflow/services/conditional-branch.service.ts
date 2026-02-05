@@ -283,13 +283,22 @@ export class ConditionalBranchService {
           (typeof left !== 'object' || (typeof left === 'object' && Object.keys(left).length > 0))
         );
 
-      case ConditionOperator.REGEX:
-        try {
-          const regex = new RegExp(String(resolvedRight));
-          return regex.test(String(left));
-        } catch {
-          return false;
-        }
+       case ConditionOperator.REGEX:
+         try {
+           const regexPattern = String(resolvedRight);
+           // Validate regex pattern to prevent ReDoS
+           // Check for potentially malicious patterns (e.g., nested quantifiers, excessive backtracking)
+           if (/.*(\([^)]*\)){10,}.*|.*(\[[^\]]*\]){10,}.*|.*(\{[^\}]*\}){10,}.*|.*(\*|\+|\?){5,}.*|.*(a+|b+|c+){5,}.*|.*(\s|.){200,}.*/.test(regexPattern)) {
+             return false;
+           }
+           
+           const regex = new RegExp(regexPattern);
+           // Limit the test input length to prevent ReDoS
+           const testInput = String(left).slice(0, 1000);
+           return regex.test(testInput);
+         } catch {
+           return false;
+         }
 
       case ConditionOperator.BETWEEN:
         if (Array.isArray(resolvedRight) && resolvedRight.length === 2) {

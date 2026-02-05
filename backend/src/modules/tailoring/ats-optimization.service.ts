@@ -369,13 +369,21 @@ export class ATSOptimizationService {
     const contentLower = content.toLowerCase();
     const totalWords = content.split(/\s+/).length;
 
-    jobKeywords.forEach(keyword => {
+     jobKeywords.forEach(keyword => {
+      // Escape regex special characters in keyword to prevent ReDoS
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       if (contentLower.includes(keyword.toLowerCase())) {
         found.push(keyword);
         // Calculate density
-        const regex = new RegExp(keyword, 'gi');
-        const matches = contentLower.match(regex) || [];
-        density[keyword] = (matches.length / totalWords) * 100;
+        try {
+          const regex = new RegExp(escapedKeyword, 'gi');
+          // Limit the test input length to prevent ReDoS
+          const testInput = contentLower.slice(0, 5000);
+          const matches = testInput.match(regex) || [];
+          density[keyword] = (matches.length / totalWords) * 100;
+        } catch {
+          density[keyword] = 0;
+        }
       } else {
         missing.push(keyword);
       }

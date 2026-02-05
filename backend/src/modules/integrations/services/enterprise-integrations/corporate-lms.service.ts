@@ -308,7 +308,7 @@ export class CorporateLMSService {
     return { success: true };
   }
 
-  async syncSAPSF Courses(connectionId: string): Promise<{ success: boolean; recordsProcessed: number }> {
+  async syncSAP_SF_Courses(connectionId: string): Promise<{ success: boolean; recordsProcessed: number }> {
     try {
       const connection = await this.prisma.corporateLMSConnection.findUnique({ where: { id: connectionId } });
       if (!connection || connection.provider !== 'sap_sf') {
@@ -318,7 +318,7 @@ export class CorporateLMSService {
       this.logger.log(`Syncing SAP SuccessFactors Learning courses for connection ${connectionId}`);
       
       // SAP SuccessFactors OData v4 API
-      const courses = await this.fetchSAPSF Courses(connection);
+      const courses = await this.fetchSAP_SF_Courses(connection);
       
       const recordsProcessed = await this.processCourses(connection.tenantId, courses);
 
@@ -334,7 +334,7 @@ export class CorporateLMSService {
     }
   }
 
-  async fetchSAPSF Courses(connection: any): Promise<Course[]> {
+  async fetchSAP_SF_Courses(connection: any): Promise<Course[]> {
     // Implement SAP SuccessFactors Learning OData v4 API
     // GET /odata/v2/LearningItem
     this.logger.log('Fetching SAP SuccessFactors Learning courses');

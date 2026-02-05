@@ -1,72 +1,116 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+/**
+ * Data retention configuration for compliance
+ */
+export interface DataRetentionConfig {
+  retentionPeriodDays: number;
+  storageLocation: string;
+  deletionPolicy: string;
+}
+
+/**
+ * Compliance requirement entity
+ */
+export interface ComplianceRequirementData {
+  regionCode: string;
+  regulation: string;
+  regulationType: string;
+  requirements: Record<string, unknown>;
+  dataRetention?: DataRetentionConfig;
+  consentRequired: boolean;
+  penalties?: string;
+  fineAmount?: number;
+  fineCurrency?: string;
+  effectiveFrom: Date;
+  version?: string;
+  sourceUrl?: string;
+}
+
+/**
+ * Result of compliance check
+ */
+export interface ComplianceCheckResult {
+  isCompliant: boolean;
+  requirements: Array<{
+    code: string;
+    description: string;
+    status: 'passed' | 'failed' | 'warning';
+    details?: string;
+  }>;
+  overallScore: number;
+  recommendations: string[];
+}
+
+/**
+ * Service for managing compliance requirements and checks across different regions
+ */
 @Injectable()
 export class ComplianceService {
   private readonly logger = new Logger(ComplianceService.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getComplianceByRegion(regionCode: string): Promise<any[]> {
-    return this.prisma.complianceRequirement.findMany({
+  /**
+   * Retrieves all active compliance requirements for a region
+   * @param regionCode - The region code (e.g., 'US', 'EU', 'CA')
+   * @returns Array of compliance requirements
+   */
+  async getComplianceByRegion(regionCode: string): Promise<ComplianceRequirementData[]> {
+    const requirements = await this.prisma.complianceRequirement.findMany({
       where: { regionCode, isActive: true },
     });
+    return requirements as unknown as ComplianceRequirementData[];
   }
 
+  /**
+   * Retrieves a specific compliance requirement by region and regulation
+   * @param regionCode - The region code
+   * @param regulation - The regulation name
+   * @returns The compliance requirement or null if not found
+   */
   async getComplianceByRegulation(
     regionCode: string,
     regulation: string,
-  ): Promise<any | null> {
-    return this.prisma.complianceRequirement.findFirst({
+  ): Promise<ComplianceRequirementData | null> {
+    const requirement = await this.prisma.complianceRequirement.findFirst({
       where: { regionCode, regulation, isActive: true },
     });
+    return requirement as unknown as ComplianceRequirementData | null;
   }
 
-  async createComplianceRequirement(data: {
-    regionCode: string;
-    regulation: string;
-    regulationType: string;
-    requirements: any;
-    dataRetention?: any;
-    consentRequired: boolean;
-    penalties?: string;
-    fineAmount?: number;
-    fineCurrency?: string;
-    effectiveFrom: Date;
-    version?: string;
-    sourceUrl?: string;
-  }): Promise<any> {
+  /**
+   * Creates a new compliance requirement
+   * @param data - The compliance requirement data
+   * @returns The created compliance requirement
+   */
+  async createComplianceRequirement(data: ComplianceRequirementData): Promise<ComplianceRequirementData> {
     return this.prisma.complianceRequirement.create({
-      data: {
-        ...data,
-        regulationType: data.regulationType as any,
-      },
-    });
+      data: data as any,
+    }) as unknown as ComplianceRequirementData;
   }
 
+  /**
+   * Updates an existing compliance requirement
+   * @param id - The requirement ID
+   * @param data - The update data
+   * @returns The updated compliance requirement
+   */
   async updateComplianceRequirement(
     id: string,
-    data: Partial<{
-      requirements: any;
-      dataRetention: any;
-      consentRequired: boolean;
-      penalties: string;
-      fineAmount: number;
-      fineCurrency: string;
-      isActive: boolean;
-      effectiveTo: Date;
-      version: string;
-      sourceUrl: string;
-      lastReviewedAt: Date;
-      reviewedBy: string;
-    }>,
-  ): Promise<any> {
+    data: Partial<ComplianceRequirementData>,
+  ): Promise<ComplianceRequirementData> {
     return this.prisma.complianceRequirement.update({
       where: { id },
-      data,
-    });
+      data: data as any,
+    }) as unknown as ComplianceRequirementData;
   }
 
+  /**
+   * Deletes a compliance requirement
+   * @param id - The requirement ID
+   */
   async deleteComplianceRequirement(id: string): Promise<void> {
     await this.prisma.complianceRequirement.delete({
       where: { id },

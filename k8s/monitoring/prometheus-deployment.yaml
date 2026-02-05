@@ -25,6 +25,15 @@ spec:
           ports:
             - containerPort: 9090
               name: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: 500m

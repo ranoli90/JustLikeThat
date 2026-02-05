@@ -46,14 +46,14 @@ resource "aws_iam_role_policy" "secrets_policy" {
           "secretsmanager:DescribeSecret"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:secretsmanager:*:*:secret:${var.app_name}/*"
+        Resource = "arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:${var.app_name}/*"
       },
       {
         Action = [
           "kms:Decrypt"
         ]
         Effect   = "Allow"
-        Resource = "*"
+        Resource = aws_kms_key.sns_key.arn
         Condition = {
           StringEquals = {
             "kms:ViaService" = "secretsmanager.${var.region}.amazonaws.com"
@@ -80,14 +80,14 @@ resource "aws_iam_role_policy" "cloudwatch_policy" {
           "logs:DescribeLogStreams"
         ]
         Effect   = "Allow"
-        Resource = "arn:aws:logs:${var.region}:*:log-group:${var.app_name}-*"
+        Resource = "arn:aws:logs:${var.region}:${var.account_id}:log-group:${var.app_name}-*:*"
       },
       {
         Action = [
           "cloudwatch:PutMetricData"
         ]
         Effect   = "Allow"
-        Resource = "*"
+        Resource = "arn:aws:cloudwatch:${var.region}:${var.account_id}:metric/*"
       }
     ]
   })
@@ -290,11 +290,177 @@ resource "aws_autoscaling_group" "main" {
 }
 
 # =============================================================================
+# KMS Key for SNS Encryption
+# =============================================================================
+
+resource "aws_kms_key" "sns_key" {
+  description             = "KMS key for SNS encryption"
+  enable_key_rotation     = true
+  deletion_window_in_days  = 30
+
+  key_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM policies for key management"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${var.account_id}:root"
+        }
+        Action = "kms:*"
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow SNS to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = "sns.amazonaws.com"
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = {
+    Name        = "${var.app_name}-sns-key-${var.environment}"
+    Environment = var.environment
+    Project     = var.app_name
+    ManagedBy   = "terraform"
+    Sprint      = "38"
+  }
+}
+
+# =============================================================================
+# WAFv2 Web ACL for ALB
+# =============================================================================
+
+resource "aws_wafv2_web_acl" "alb_acl" {
+  name  = "${var.app_name}-alb-waf-${var.environment}"
+  scope = "REGIONAL"
+
+  default_action {
+    allow {
+      # Default allow - rules will block specific threats
+    }
+  }
+
+  # AWS Managed Rules
+  rule {
+    name = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      sampled_requests_enabled = true
+      cloudwatch_metrics_enabled = true
+      metric_name               = "${var.app_name}-alb-waf-common"
+    }
+  }
+
+  rule {
+    name = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 2
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      sampled_requests_enabled = true
+      cloudwatch_metrics_enabled = true
+      metric_name               = "${var.app_name}-alb-waf-bad-inputs"
+    }
+  }
+
+  rule {
+    name = "AWSManagedRulesSQLiRuleSet"
+    priority = 3
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesSQLiRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      sampled_requests_enabled = true
+      cloudwatch_metrics_enabled = true
+      metric_name               = "${var.app_name}-alb-waf-sqli"
+    }
+  }
+
+  rule {
+    name = "AWSManagedRulesLinuxRuleSet"
+    priority = 4
+
+    override_action {
+      none {}
+    }
+
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesLinuxRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+
+    visibility_config {
+      sampled_requests_enabled = true
+      cloudwatch_metrics_enabled = true
+      metric_name               = "${var.app_name}-alb-waf-linux"
+    }
+  }
+
+  visibility_config {
+    sampled_requests_enabled = true
+    cloudwatch_metrics_enabled = true
+    metric_name               = "${var.app_name}-alb-waf"
+  }
+
+  tags = {
+    Name        = "${var.app_name}-alb-waf-acl-${var.environment}"
+    Environment = var.environment
+    Project     = var.app_name
+    ManagedBy   = "terraform"
+    Sprint      = "38"
+  }
+}
+
+# =============================================================================
 # SNS Topic for ASG Notifications
 # =============================================================================
 
 resource "aws_sns_topic" "asg_notifications" {
   name = "${var.app_name}-asg-notifications-${var.environment}"
+  kms_master_key_id = aws_kms_key.sns_key.arn
 
   tags = {
     Name        = "${var.app_name}-asg-sns-${var.environment}"
@@ -326,6 +492,7 @@ resource "aws_lb" "main" {
 
   enable_deletion_protection = var.environment == "prod"
   enable_http2               = true
+  web_acl_id                 = aws_wafv2_web_acl.alb_acl.id
 
   access_logs {
     bucket  = var.alb_log_bucket

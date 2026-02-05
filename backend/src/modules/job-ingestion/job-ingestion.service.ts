@@ -8,11 +8,43 @@ import { JobNormalizationService } from './job-normalization.service';
 import { RateLimitService, RateLimitInfo, CostInfo } from './rate-limit.service';
 import { AbstractJobSource, RawJobData, SearchParams } from './integrations';
 
+/**
+ * Query parameters for paginated listing
+ */
+export interface PaginationQuery {
+  page?: number;
+  size?: number;
+}
+
+/**
+ * Paginated response structure
+ */
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    size: number;
+    total: number;
+    pages: number;
+  };
+}
+
+/**
+ * Service for managing job posting ingestion from various sources
+ */
 @Injectable()
 export class JobIngestionService {
   private readonly logger = new Logger(JobIngestionService.name);
   private integrationRegistry: Map<string, AbstractJobSource> = new Map();
 
+  /**
+   * Creates a new JobIngestionService instance
+   * @param jobSourceRepository - Repository for job sources
+   * @param ingestionLogRepository - Repository for ingestion logs
+   * @param jobPostingRepository - Repository for job postings
+   * @param normalizationService - Service for normalizing job data
+   * @param rateLimitService - Service for managing rate limits
+   */
   constructor(
     @InjectRepository(JobSource)
     private jobSourceRepository: Repository<JobSource>,
@@ -25,21 +57,41 @@ export class JobIngestionService {
   ) {}
 
   // Integration registration methods
+
+  /**
+   * Registers a job source integration
+   * @param sourceId - The unique identifier for the source
+   * @param integration - The integration implementation
+   */
   registerIntegration(sourceId: string, integration: AbstractJobSource): void {
     this.integrationRegistry.set(sourceId, integration);
     this.logger.log(`Registered integration: ${sourceId}`);
   }
 
+  /**
+   * Retrieves a registered integration by source ID
+   * @param sourceId - The source identifier
+   * @returns The integration or undefined if not found
+   */
   getIntegration(sourceId: string): AbstractJobSource | undefined {
     return this.integrationRegistry.get(sourceId);
   }
 
+  /**
+   * Retrieves all registered integrations
+   * @returns Array of all registered integrations
+   */
   getAllIntegrations(): AbstractJobSource[] {
     return Array.from(this.integrationRegistry.values());
   }
 
-  async getJobSources(userId: string, query: any) {
-    const { page = 1, size = 10 } = query;
+  /**
+   * Retrieves paginated job sources for a user
+   * @param userId - The user ID
+   * @param query - Pagination query parameters
+   * @returns Paginated list of job sources
+   */
+  async getJobSources(userId: string, query: PaginationQuery = {}): Promise<PaginatedResponse<JobSource>> {
     const [data, total] = await this.jobSourceRepository.findAndCount({
       skip: (page - 1) * size,
       take: size,
@@ -57,21 +109,46 @@ export class JobIngestionService {
     };
   }
 
-  async getJobSourceById(userId: string, id: string) {
+  /**
+   * Retrieves a specific job source by ID
+   * @param userId - The user ID
+   * @param id - The job source ID
+   * @returns The job source or null
+   */
+  async getJobSourceById(userId: string, id: string): Promise<JobSource | null> {
     return this.jobSourceRepository.findOneBy({ id });
   }
 
-  async createJobSource(userId: string, createJobSourceDto: any) {
+  /**
+   * Creates a new job source
+   * @param userId - The user ID
+   * @param createJobSourceDto - The job source data
+   * @returns The created job source
+   */
+  async createJobSource(userId: string, createJobSourceDto: Partial<JobSource>): Promise<JobSource> {
     const jobSource = this.jobSourceRepository.create(createJobSourceDto);
     return this.jobSourceRepository.save(jobSource);
   }
 
-  async updateJobSource(userId: string, id: string, updateJobSourceDto: any) {
+  /**
+   * Updates an existing job source
+   * @param userId - The user ID
+   * @param id - The job source ID
+   * @param updateJobSourceDto - The update data
+   * @returns The updated job source
+   */
+  async updateJobSource(userId: string, id: string, updateJobSourceDto: Partial<JobSource>): Promise<JobSource | null> {
     await this.jobSourceRepository.update(id, updateJobSourceDto);
     return this.jobSourceRepository.findOneBy({ id });
   }
 
-  async deleteJobSource(userId: string, id: string) {
+  /**
+   * Deletes a job source
+   * @param userId - The user ID
+   * @param id - The job source ID
+   * @returns Deletion result
+   */
+  async deleteJobSource(userId: string, id: string): Promise<{ deleted: boolean }> {
     const result = await this.jobSourceRepository.delete(id);
     return { deleted: result.affected ? result.affected > 0 : false };
   }

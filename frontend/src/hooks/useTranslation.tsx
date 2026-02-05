@@ -132,6 +132,10 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({
       let translation: string | Record<string, string> = translations;
 
       for (const part of parts) {
+        // Prevent prototype pollution
+        if (part === '__proto__' || part === 'constructor' || part === 'prototype') {
+          return key;
+        }
         if (translation && typeof translation === 'object' && part in translation) {
           translation = translation[part] as string | Record<string, string>;
         } else {
@@ -147,7 +151,13 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({
       if (params) {
         let result = translation;
         for (const [param, value] of Object.entries(params)) {
-          result = result.replace(new RegExp(`{{${param}}}`, 'g'), String(value));
+          // Prevent prototype pollution through params
+          if (param === '__proto__' || param === 'constructor' || param === 'prototype') {
+            continue;
+          }
+          // Escape regex special characters in value
+          const escapedValue = String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          result = result.replace(new RegExp(`{{${param}}}`, 'g'), escapedValue);
         }
         return result;
       }

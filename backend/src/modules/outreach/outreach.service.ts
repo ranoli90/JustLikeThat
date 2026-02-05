@@ -21,8 +21,23 @@ import { CompanyInsider, InsiderRelationship, InsiderStatus } from '../../entiti
 import { WarmIntroRequest, IntroStatus, IntroRequestType } from '../../entities/warm-intro.entity';
 import { NetworkingOpportunity, OpportunityType, OpportunityStatus } from '../../entities/networking-opportunity.entity';
 
+/**
+ * Service for managing outreach campaigns, contacts, sequences, and networking opportunities
+ */
 @Injectable()
 export class OutreachService {
+  /**
+   * Creates a new OutreachService instance
+   * @param campaignRepo - Repository for outreach campaigns
+   * @param contactRepo - Repository for outreach contacts
+   * @param sequenceRepo - Repository for outreach sequences
+   * @param templateRepo - Repository for outreach templates
+   * @param messageRepo - Repository for outreach messages
+   * @param recruiterRepo - Repository for recruiter relationships
+   * @param insiderRepo - Repository for company insiders
+   * @param introRepo - Repository for warm intro requests
+   * @param opportunityRepo - Repository for networking opportunities
+   */
   constructor(
     @InjectRepository(OutreachCampaign)
     private campaignRepo: Repository<OutreachCampaign>,
@@ -45,6 +60,13 @@ export class OutreachService {
   ) {}
 
   // Campaign Management
+
+  /**
+   * Creates a new outreach campaign
+   * @param data - Campaign data
+   * @param userId - The user ID who owns this campaign
+   * @returns The created campaign
+   */
   async createCampaign(data: Partial<OutreachCampaign>, userId: string): Promise<OutreachCampaign> {
     const campaign = this.campaignRepo.create({
       ...data,
@@ -54,6 +76,11 @@ export class OutreachService {
     return this.campaignRepo.save(campaign);
   }
 
+  /**
+   * Retrieves all campaigns for a user
+   * @param userId - The user ID
+   * @returns Array of campaigns
+   */
   async getCampaigns(userId: string): Promise<OutreachCampaign[]> {
     return this.campaignRepo.find({
       where: { userId },
@@ -62,6 +89,13 @@ export class OutreachService {
     });
   }
 
+  /**
+   * Retrieves a specific campaign by ID
+   * @param id - The campaign ID
+   * @param userId - The user ID for authorization
+   * @returns The campaign
+   * @throws NotFoundException if campaign not found
+   */
   async getCampaign(id: string, userId: string): Promise<OutreachCampaign> {
     const campaign = await this.campaignRepo.findOne({
       where: { id, userId },
@@ -71,12 +105,25 @@ export class OutreachService {
     return campaign;
   }
 
+  /**
+   * Updates an existing campaign
+   * @param id - The campaign ID
+   * @param data - The update data
+   * @param userId - The user ID for authorization
+   * @returns The updated campaign
+   */
   async updateCampaign(id: string, data: Partial<OutreachCampaign>, userId: string): Promise<OutreachCampaign> {
     await this.getCampaign(id, userId);
     await this.campaignRepo.update({ id, userId }, data);
     return this.getCampaign(id, userId);
   }
 
+  /**
+   * Launches a campaign, setting it to active status
+   * @param id - The campaign ID
+   * @param userId - The user ID for authorization
+   * @returns The launched campaign
+   */
   async launchCampaign(id: string, userId: string): Promise<OutreachCampaign> {
     const campaign = await this.getCampaign(id, userId);
     campaign.status = CampaignStatus.ACTIVE;
@@ -85,6 +132,13 @@ export class OutreachService {
   }
 
   // Contact Management
+
+  /**
+   * Adds a new contact to the outreach system
+   * @param data - Contact data
+   * @param userId - The user ID who owns this contact
+   * @returns The created contact
+   */
   async addContact(data: Partial<OutreachContact>, userId: string): Promise<OutreachContact> {
     const contact = this.contactRepo.create({
       ...data,
@@ -94,6 +148,12 @@ export class OutreachService {
     return this.contactRepo.save(contact);
   }
 
+  /**
+   * Retrieves contacts for a user, optionally filtered by campaign
+   * @param userId - The user ID
+   * @param campaignId - Optional campaign ID to filter by
+   * @returns Array of contacts
+   */
   async getContacts(userId: string, campaignId?: string): Promise<OutreachContact[]> {
     const where = campaignId ? { userId, campaignId } : { userId };
     return this.contactRepo.find({ where, order: { createdAt: 'DESC' } });

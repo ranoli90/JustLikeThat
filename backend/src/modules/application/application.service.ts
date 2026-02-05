@@ -1,15 +1,32 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Application, ApplicationState, AutonomyMode } from '../../entities/application.entity';
 import { ApplicationStateMachine } from './application.state-machine';
 import { ApplicationPreventionService } from './application-prevention.service';
+import { PaginatedResponse, PaginationQuery } from '../../common/utils';
 
+/**
+ * Application query parameters
+ */
+export interface ApplicationQuery extends PaginationQuery {
+  state?: ApplicationState;
+}
+
+/**
+ * Application service for managing job applications
+ */
 @Injectable()
 export class ApplicationService {
-  // Concurrency caps per user/tenant
+  /** Maximum concurrent applications per user */
   private static readonly CONCURRENCY_CAP = 20;
 
+  /**
+   * Creates a new ApplicationService instance
+   * @param applicationRepository - Repository for applications
+   * @param stateMachine - State machine for application transitions
+   * @param preventionService - Service for preventing duplicate applications
+   */
   constructor(
     @InjectRepository(Application)
     private applicationRepository: Repository<Application>,
@@ -17,8 +34,13 @@ export class ApplicationService {
     private preventionService: ApplicationPreventionService,
   ) {}
 
-  // Get all applications for a user
-  async getApplications(userId: string, query: any) {
+  /**
+   * Retrieves paginated applications for a user
+   * @param userId - The user ID
+   * @param query - Query parameters for filtering and pagination
+   * @returns Paginated list of applications
+   */
+  async getApplications(userId: string, query: ApplicationQuery = {}): Promise<PaginatedResponse<Application>> {
     const { page = 1, size = 10, state } = query;
     const queryBuilder = this.applicationRepository.createQueryBuilder('application')
       .where('application.userId = :userId', { userId });
@@ -44,15 +66,25 @@ export class ApplicationService {
     };
   }
 
-  // Get application by ID
-  async getApplicationById(userId: string, id: string) {
+  /**
+   * Retrieves a specific application by ID
+   * @param userId - The user ID
+   * @param id - The application ID
+   * @returns The application or null if not found
+   */
+  async getApplicationById(userId: string, id: string): Promise<Application | null> {
     return this.applicationRepository.findOne({
       where: { id, userId },
     });
   }
 
-  // Create a new application with prevention checks
-  async createApplication(userId: string, createApplicationDto: any) {
+  /**
+   * Creates a new application with prevention checks
+   * @param userId - The user ID
+   * @param createApplicationDto - The application data
+   * @returns The created application
+   */
+  async createApplication(userId: string, createApplicationDto: Partial<Application>): Promise<Application> {
     await this.preventApplicationCreation(userId, createApplicationDto.jobPostingId);
 
     const application = this.applicationRepository.create({

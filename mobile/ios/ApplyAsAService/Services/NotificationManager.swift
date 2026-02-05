@@ -8,6 +8,7 @@
 import Foundation
 import UserNotifications
 import UIKit
+import os.log
 
 // MARK: - Notification ManagerManager: ObservableObject
 
@@ -44,7 +45,7 @@ final class Notification {
                 }
                 
                 if let error = error {
-                    print("Notification authorization error: \(error.localizedDescription)")
+                    os_log("Notification authorization error: %{public}@", log: .default, type: .error, error.localizedDescription)
                 }
             }
         }

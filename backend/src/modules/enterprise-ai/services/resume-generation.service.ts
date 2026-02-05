@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { GeneratedResume } from '../entities/generated-resume.entity';
 import { ResumeTemplate } from '../entities/resume-template.entity';
 
+/**
+ * Input data for resume generation
+ */
 export interface ResumeGenerationInput {
   userId: string;
   templateId?: string;
@@ -45,21 +48,27 @@ export interface ResumeGenerationInput {
   };
 }
 
+/**
+ * Result of resume generation with ATS scores
+ */
 export interface ResumeGenerationResult {
   id: string;
-  content: Record<string, any>;
+  content: Record<string, unknown>;
   atsScore: number;
   keywordsScore: number;
   formatScore: number;
-  exportedFormats?: Record<string, any>;
+  exportedFormats?: Record<string, unknown>;
   createdAt: Date;
 }
 
+/**
+ * Service for generating and optimizing resumes using AI
+ */
 @Injectable()
 export class ResumeGenerationService {
   private readonly logger = new Logger(ResumeGenerationService.name);
   
-  // 50+ ATS-compatible templates
+  /** ATS-compatible resume templates */
   private readonly templates: ResumeTemplate[] = [
     {
       id: 'template-1',
@@ -227,7 +236,7 @@ export class ResumeGenerationService {
     });
   }
 
-  private optimizeKeywords(skills: string[], targetKeywords?: string[]): Record<string, any> {
+  private optimizeKeywords(skills: string[], targetKeywords?: string[]): Record<string, string[]> {
     const categorizedSkills: Record<string, string[]> = {
       technical: [],
       soft: [],
@@ -260,7 +269,7 @@ export class ResumeGenerationService {
     return categorizedSkills;
   }
 
-  private determineSectionOrder(input: any, templateSections: string[]): string[] {
+  private determineSectionOrder(input: ResumeGenerationInput, templateSections: string[]): string[] {
     // Dynamic section ordering based on job relevance
     const order: Record<string, number> = {
       header: 1,

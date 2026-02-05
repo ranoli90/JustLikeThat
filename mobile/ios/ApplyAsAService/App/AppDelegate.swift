@@ -10,6 +10,7 @@ import SwiftUI
 import UserNotifications
 import FirebaseCore
 import FirebaseMessaging
+import os.log
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     
@@ -35,7 +36,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        print("Device Token: \(token)")
+        os_log("Device Token registered", log: .default, type: .debug)
         
         // Send device token to server
         Task {
@@ -47,7 +48,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        print("Failed to register for remote notifications: \(error.localizedDescription)")
+        os_log("Failed to register for remote notifications: %{public}@", log: .default, type: .error, error.localizedDescription)
     }
     
     // Handle background fetch
@@ -70,7 +71,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         let userInfo = notification.request.content.userInfo
-        print("Notification received: \(userInfo)")
+        os_log("Notification received", log: .default, type: .debug)
         completionHandler([.banner, .sound, .badge])
     }
     
@@ -80,7 +81,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let userInfo = response.notification.request.content.userInfo
-        print("Notification action: \(userInfo)")
+        os_log("Notification action received", log: .default, type: .debug)
         
         // Handle notification tap
         Task { @MainActor in
@@ -95,7 +96,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
 extension AppDelegate: MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         guard let token = fcmToken else { return }
-        print("Firebase registration token: \(token)")
+        os_log("Firebase registration token received", log: .default, type: .debug)
         
         let dataDict: [String: String] = ["token": token]
         NotificationCenter.default.post(

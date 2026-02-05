@@ -9,13 +9,15 @@ import {
   WidgetType,
 } from '../interfaces/analytics.interface';
 import { v4 as uuidv4 } from 'uuid';
+import { RateLimitConstants, TimeConstants } from '../../common/constants';
 
+/**
+ * Analytics service for tracking events, managing dashboards, and recording metrics
+ */
 @Injectable()
 export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
   private readonly eventBuffer: AnalyticsEvent[] = [];
-  private readonly BUFFER_FLUSH_INTERVAL = 1000; // 1 second
-  private readonly BUFFER_MAX_SIZE = 100;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -23,10 +25,13 @@ export class AnalyticsService {
     private readonly kafka: KafkaService,
   ) {
     // Start buffer flush interval
-    setInterval(() => this.flushEventBuffer(), this.BUFFER_FLUSH_INTERVAL);
+    setInterval(() => this.flushEventBuffer(), TimeConstants.BUFFER_FLUSH_INTERVAL_MS);
   }
 
-  // Event Tracking
+  /**
+   * Tracks an analytics event and adds it to the processing buffer
+   * @param event - The event data to track (without id and timestamp)
+   */
   async trackEvent(event: Omit<AnalyticsEvent, 'id' | 'timestamp'>): Promise<void> {
     const analyticsEvent: AnalyticsEvent = {
       ...event,
@@ -38,7 +43,7 @@ export class AnalyticsService {
     this.eventBuffer.push(analyticsEvent);
 
     // Flush if buffer is full
-    if (this.eventBuffer.length >= this.BUFFER_MAX_SIZE) {
+    if (this.eventBuffer.length >= RateLimitConstants.BUFFER_MAX_SIZE) {
       await this.flushEventBuffer();
     }
 

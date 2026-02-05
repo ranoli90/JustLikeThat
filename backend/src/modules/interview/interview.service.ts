@@ -8,6 +8,9 @@ import { QuestionPreparationService } from './question-preparation.service';
 import { InterviewFeedbackService, AnswerFeedback } from './interview-feedback.service';
 import { InterviewSchedulingService } from './interview-scheduling.service';
 
+/**
+ * Data transfer object for creating an interview session
+ */
 export interface CreateInterviewSessionDto {
   userId: string;
   applicationId?: string;
@@ -17,14 +20,29 @@ export interface CreateInterviewSessionDto {
   jobTitle?: string;
 }
 
+/**
+ * Data transfer object for requesting interview questions
+ */
 export interface InterviewQuestionDto {
   questionType: QuestionType;
   difficulty?: Difficulty;
   count?: number;
 }
 
+/**
+ * Service for managing interview practice sessions, questions, and feedback
+ */
 @Injectable()
 export class InterviewService {
+  /**
+   * Creates a new InterviewService instance
+   * @param sessionRepository - Repository for interview sessions
+   * @param questionRepository - Repository for interview questions
+   * @param companyResearchService - Service for researching companies
+   * @param questionPreparationService - Service for generating questions
+   * @param interviewFeedbackService - Service for providing feedback
+   * @param schedulingService - Service for scheduling interviews
+   */
   constructor(
     @InjectRepository(InterviewSession)
     private readonly sessionRepository: Repository<InterviewSession>,
@@ -37,7 +55,9 @@ export class InterviewService {
   ) {}
 
   /**
-   * Creates a new interview practice session
+   * Creates a new interview practice session with generated questions
+   * @param dto - The interview session creation data
+   * @returns The created interview session
    */
   async createSession(dto: CreateInterviewSessionDto): Promise<InterviewSession> {
     const session = this.sessionRepository.create({

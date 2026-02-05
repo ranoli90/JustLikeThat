@@ -18,6 +18,78 @@ resource "aws_vpc" "main" {
   }
 }
 
+# =============================================================================
+# VPC Flow Logging
+# =============================================================================
+
+resource "aws_cloudwatch_log_group" "vpc_flow" {
+  name              = "${var.app_name}-vpc-flow-${var.environment}"
+  retention_in_days = 30
+
+  tags = {
+    Name        = "${var.app_name}-vpc-flow-log-${var.environment}"
+    Environment = var.environment
+    Project     = var.app_name
+    ManagedBy   = "terraform"
+    Sprint      = "38"
+  }
+}
+
+# IAM Role for VPC Flow Logs
+resource "aws_iam_role" "vpc_flow_logs" {
+  name = "${var.app_name}-vpc-flow-logs-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "vpc_flow_logs" {
+  name = "${var.app_name}-vpc-flow-logs-policy-${var.environment}"
+  role = aws_iam_role.vpc_flow_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "arn:aws:logs:${var.region}:${var.account_id}:log-group:${var.app_name}-vpc-flow-${var.environment}:*"
+      }
+    ]
+  })
+}
+
+resource "aws_flow_log" "vpc_flow" {
+  log_destination_type = "cloud-watch-logs"
+  log_group_name       = aws_cloudwatch_log_group.vpc_flow.name
+  traffic_type         = "ALL"
+  vpc_id               = aws_vpc.main.id
+  iam_role_arn         = aws_iam_role.vpc_flow_logs.arn
+
+  tags = {
+    Name        = "${var.app_name}-vpc-flow-${var.environment}"
+    Environment = var.environment
+    Project     = var.app_name
+    ManagedBy   = "terraform"
+    Sprint      = "38"
+  }
+}
+
 # Internet Gateway
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id

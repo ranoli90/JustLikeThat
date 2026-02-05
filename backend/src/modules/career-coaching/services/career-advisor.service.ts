@@ -3,37 +3,49 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CareerConversation } from '../entities/career-coaching.entity';
 
+/**
+ * Represents a chat message in a career advisory conversation
+ */
 export interface ChatMessage {
   role: 'user' | 'advisor' | 'system';
   content: string;
   timestamp: Date;
 }
 
+/**
+ * Context provided to the career advisor for generating personalized responses
+ */
 export interface AdvisorContext {
-  userProfile?: any;
-  careerGoals?: any[];
+  userProfile?: Record<string, unknown>;
+  careerGoals?: Array<Record<string, unknown>>;
   currentSkills?: string[];
   recentConversations?: ChatMessage[];
   sentimentHistory?: number[];
-  milestones?: any[];
-  [key: string]: any;
+  milestones?: Array<Record<string, unknown>>;
+  [key: string]: unknown;
 }
 
+/**
+ * Response from the career advisor with recommendations and insights
+ */
 export interface AdvisorResponse {
   message: string;
-  recommendations?: any[];
-  milestones?: any[];
+  recommendations?: Array<Record<string, unknown>>;
+  milestones?: Array<Record<string, unknown>>;
   sentiment?: number;
   contextUpdated?: boolean;
 }
 
+/**
+ * Service for providing AI-powered career advisory conversations
+ */
 @Injectable()
 export class CareerAdvisorService {
   private readonly logger = new Logger(CareerAdvisorService.name);
   private readonly conversationMemory = 100;
   private readonly personalizationDataPoints = 50;
 
-  // Knowledge base for career advice
+  /** Knowledge base for career advice organized by topic */
   private readonly careerKnowledge = {
     leadership: [
       'Lead by example and demonstrate the behaviors you want to see in your team',

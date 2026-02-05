@@ -1,9 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { IntakeFormData, DerivedProfile } from '../../dto/intake/intake-questions.zod';
 
+/**
+ * Service for processing user intake data and deriving candidate profiles
+ */
 @Injectable()
 export class IntakeService {
-  // Process raw intake data into a derived candidate profile
+  /**
+   * Processes raw intake form data into a derived candidate profile
+   * @param data - The raw intake form data
+   * @returns Derived profile with normalized skills, preferences, and risk assessment
+   */
   processIntakeData(data: IntakeFormData): DerivedProfile {
     const candidateType = this.determineCandidateType(data);
     const careerStage = this.determineCareerStage(data);
@@ -24,7 +31,11 @@ export class IntakeService {
     };
   }
 
-  // Determine candidate type based on experience and goals
+  /**
+   * Determines candidate type based on experience and career goals
+   * @param data - The intake form data
+   * @returns The determined candidate type
+   */
   private determineCandidateType(data: IntakeFormData): DerivedProfile['candidateType'] {
     // New Grad: Recent education, minimal experience, entry-level goals
     if (data.careerGoals.shortTermGoal.toLowerCase().includes('entry') || 
@@ -43,7 +54,11 @@ export class IntakeService {
     return 'EXPERIENCED_PROFESSIONAL';
   }
 
-  // Determine career stage based on experience level
+  /**
+   * Determines career stage based on experience level and skills
+   * @param data - The intake form data
+   * @returns The determined career stage
+   */
   private determineCareerStage(data: IntakeFormData): DerivedProfile['careerStage'] {
     const minExp = data.constraints.minimumExperienceLevel;
     
@@ -65,7 +80,11 @@ export class IntakeService {
     }
   }
 
-  // Build normalized skills graph with weights
+  /**
+   * Builds a normalized skills graph with weighted skills
+   * @param data - The intake form data
+   * @returns Skills graph with technical and soft skills
+   */
   private buildSkillsGraph(data: IntakeFormData) {
     const technicalSkills: Record<string, number> = {};
     const softSkills: Record<string, number> = {};

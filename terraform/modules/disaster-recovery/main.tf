@@ -35,6 +35,30 @@ variable "rpo_minutes" {
   default     = 5
 }
 
+variable "account_id" {
+  description = "AWS account ID"
+  type        = string
+}
+
+# =============================================================================
+# Lambda Code Signing Configuration
+# =============================================================================
+
+resource "aws_lambda_code_signing_config" "lambda_csc" {
+  description = "Code signing config for Lambda functions"
+  policies {
+    untrusted_artifact_on_deployment = "Enforce"
+  }
+
+  signing_profiles = [
+    aws_lambda_signing_profile.lambda_signing_profile.arn
+  ]
+}
+
+resource "aws_lambda_signing_profile" "lambda_signing_profile" {
+  name = "${var.environment}-lambda-signing-profile"
+}
+
 # S3 Bucket for Cross-Region Backups
 resource "aws_s3_bucket" "dr_backups" {
   bucket = "${var.environment}-dr-backups-${var.primary_region}"
@@ -104,8 +128,10 @@ resource "aws_s3_bucket" "dr_backups_replica" {
 
 # KMS Key for Backup Encryption
 resource "aws_kms_key" "dr_key" {
-  description = "KMS key for DR backups"
-  
+  description             = "KMS key for DR backups"
+  enable_key_rotation     = true
+  deletion_window_in_days  = 30
+
   key_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -127,7 +153,8 @@ resource "aws_kms_key" "dr_key" {
         Action = [
           "kms:Encrypt",
           "kms:Decrypt",
-          "kms:GenerateDataKey"
+          "kms:GenerateDataKey",
+          "kms:GenerateDataKeyWithoutPlaintext"
         ]
         Resource = "*"
       }
@@ -231,7 +258,8 @@ resource "aws_lambda_function" "dr_check" {
   role          = aws_iam_role.lambda_dr_check.arn
   handler       = "index.handler"
   runtime       = "nodejs18.x"
-  
+  code_signing_config_arn = aws_lambda_code_signing_config.lambda_csc.arn
+
   timeout = 300
   
   environment {
@@ -266,7 +294,7 @@ resource "aws_iam_role" "lambda_dr_check" {
 resource "aws_iam_role_policy" "lambda_dr_check" {
   name = "${var.environment}-lambda-dr-check-policy"
   role = aws_iam_role.lambda_dr_check.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -277,7 +305,7 @@ resource "aws_iam_role_policy" "lambda_dr_check" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "*"
+        Resource = "arn:aws:logs:${var.primary_region}:${var.account_id}:log-group:/aws/lambda/${var.environment}-dr-check:*"
       },
       {
         Effect = "Allow"
@@ -301,6 +329,11 @@ resource "aws_iam_role_policy" "lambda_dr_check" {
           "ecs:DescribeServices"
         ]
         Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:RequestedRegion": var.primary_region
+          }
+        }
       }
     ]
   })
@@ -313,7 +346,8 @@ resource "aws_lambda_function" "backup_trigger" {
   role          = aws_iam_role.lambda_backup.arn
   handler       = "index.handler"
   runtime       = "nodejs18.x"
-  
+  code_signing_config_arn = aws_lambda_code_signing_config.lambda_csc.arn
+
   environment {
     variables = {
       BACKUP_BUCKET = aws_s3_bucket.dr_backups.id
@@ -358,7 +392,7 @@ resource "aws_iam_role" "lambda_backup" {
 resource "aws_iam_role_policy" "lambda_backup" {
   name = "${var.environment}-lambda-backup-policy"
   role = aws_iam_role.lambda_backup.id
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -369,7 +403,7 @@ resource "aws_iam_role_policy" "lambda_backup" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "*"
+        Resource = "arn:aws:logs:${var.primary_region}:${var.account_id}:log-group:/aws/lambda/${var.environment}-backup-trigger:*"
       },
       {
         Effect = "Allow"
@@ -386,7 +420,7 @@ resource "aws_iam_role_policy" "lambda_backup" {
           "dynamodb:Backup",
           "dynamodb:Restore"
         ]
-        Resource = "*"
+        Resource = "arn:aws:dynamodb:${var.primary_region}:${var.account_id}:table/*"
       },
       {
         Effect = "Allow"
@@ -395,7 +429,7 @@ resource "aws_iam_role_policy" "lambda_backup" {
           "rds:CopyDBSnapshot",
           "rds:DescribeDBSnapshots"
         ]
-        Resource = "*"
+        Resource = "arn:aws:rds:${var.primary_region}:${var.account_id}:snapshot:*"
       }
     ]
   })

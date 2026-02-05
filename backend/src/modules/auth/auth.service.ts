@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { CandidateProfile } from '../../entities/candidate-profile.entity';
 import { UserPreferences } from '../../entities/user-preferences.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { AuthConstants, TimeConstants } from '../../common/constants';
 
 @Injectable()
 export class AuthService {
@@ -147,11 +148,15 @@ export class AuthService {
   }
 
   /**
-   * Reset password using reset token
+   * Resets user password using a reset token
+   * @param token - The password reset token
+   * @param newPassword - The new password to set
+   * @returns Success message
+   * @throws BadRequestException if token is invalid or expired
    */
   async resetPasswordWithToken(token: string, newPassword: string): Promise<{ message: string }> {
     const user = await this.userRepository.findOne({
-      where: { resetPasswordToken: await bcrypt.hash(token, 10) },
+      where: { resetPasswordToken: await bcrypt.hash(token, AuthConstants.BCRYPT_SALT_ROUNDS) },
     });
 
     if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
@@ -159,12 +164,12 @@ export class AuthService {
     }
 
     // Validate new password
-    if (newPassword.length < 8) {
+    if (newPassword.length < AuthConstants.MIN_PASSWORD_LENGTH) {
       throw new BadRequestException('Password must be at least 8 characters');
     }
 
     // Update password
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = await bcrypt.hash(newPassword, AuthConstants.BCRYPT_SALT_ROUNDS);
     user.passwordUpdatedAt = new Date();
     user.resetPasswordToken = null;
     user.resetPasswordExpires = null;
@@ -218,7 +223,7 @@ export class AuthService {
     // Generate new verification token
     const verificationToken = uuidv4();
     user.emailVerificationToken = verificationToken;
-    user.emailVerificationExpires = new Date(Date.now() + 86400000); // 24 hours
+    user.emailVerificationExpires = new Date(Date.now() + TimeConstants.TWENTY_FOUR_HOURS_MS);
     await this.userRepository.save(user);
 
     this.logger.log(`Verification email resent for user ${user.id}`);
@@ -229,7 +234,13 @@ export class AuthService {
     return { message: 'Verification email sent' };
   }
 
-  async getProfile(userId: string) {
+    /**
+     * Retrieves user profile by ID
+     * @param userId - The user ID
+     * @returns User profile data
+     * @throws UnauthorizedException if user not found
+     */
+    async getProfile(userId: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -244,6 +255,12 @@ export class AuthService {
     };
   }
 
+  /**
+   * Registers a new user in the system
+   * @param signupDto - Signup data including email, password, and user details
+   * @returns Access token, refresh token, and user profile
+   * @throws UnauthorizedException if email is already in use or password doesn't meet requirements
+   */
   async signup(signupDto: SignupDto): Promise<{ accessToken: string; refreshToken: string; user: { id: string; email: string; firstName: string; lastName: string } }> {
     const existingUser = await this.userRepository.findOne({ where: { email: signupDto.email } });
     if (existingUser) {
@@ -251,20 +268,20 @@ export class AuthService {
     }
 
     // Validate password strength
-    if (signupDto.password.length < 8) {
+    if (signupDto.password.length < AuthConstants.MIN_PASSWORD_LENGTH) {
       throw new BadRequestException('Password must be at least 8 characters');
     }
 
     // Generate email verification token
     const verificationToken = uuidv4();
 
-    const hashedPassword = await bcrypt.hash(signupDto.password, 10);
+    const hashedPassword = await bcrypt.hash(signupDto.password, AuthConstants.BCRYPT_SALT_ROUNDS);
 
     const user = this.userRepository.create({
       ...signupDto,
       passwordHash: hashedPassword,
       emailVerificationToken: verificationToken,
-      emailVerificationExpires: new Date(Date.now() + 86400000), // 24 hours
+      emailVerificationExpires: new Date(Date.now() + TimeConstants.TWENTY_FOUR_HOURS_MS),
     });
     await this.userRepository.save(user);
 
@@ -309,6 +326,12 @@ export class AuthService {
     };
   }
 
+  /**
+   * Authenticates user with email and password
+   * @param loginDto - Login credentials
+   * @returns Access token, refresh token, and user data
+   * @throws UnauthorizedException if credentials are invalid
+   */
   async login(loginDto: LoginDto): Promise<{ accessToken: string; refreshToken: string; user: { id: string; email: string; firstName: string; lastName: string; avatarUrl?: string; onboardingCompleted: boolean } }> {
     const { email, password } = loginDto;
 
@@ -356,7 +379,12 @@ export class AuthService {
   }
 
   /**
-   * Change password (admin function for password reset without current password)
+   * Changes user password (admin function)
+   * @param userId - The user ID
+   * @param newPassword - The new password
+   * @returns Success message
+   * @throws UnauthorizedException if user not found
+   * @throws BadRequestException if password doesn't meet requirements
    */
   async changePassword(userId: string, newPassword: string): Promise<{ message: string }> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
@@ -364,11 +392,11 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword.length < AuthConstants.MIN_PASSWORD_LENGTH) {
       throw new BadRequestException('Password must be at least 8 characters');
     }
 
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordHash = await bcrypt.hash(newPassword, AuthConstants.BCRYPT_SALT_ROUNDS);
     user.passwordUpdatedAt = new Date();
     await this.userRepository.save(user);
 
