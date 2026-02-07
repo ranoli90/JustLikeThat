@@ -2,157 +2,54 @@ import {
   Controller,
   Get,
   Post,
-  Put,
-  Delete,
-  Body,
-  UseGuards,
-  Request,
   Param,
+  Body,
   Query,
-  UsePipes,
+  UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 import { JobIngestionService } from './job-ingestion.service';
-import { RateLimitService } from './rate-limit.service';
-import { paginationSchema, jobFilterSchema } from '../../dto/common/pagination.zod';
-import type { PaginationQueryDto, JobFilterDto } from '../../dto/common/pagination.zod';
-import { ZodValidationPipe } from '../../pipes/zod.pipe';
+import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 
-@Controller('api/jobs')
+@Controller('jobs')
 @UseGuards(JwtAuthGuard)
 export class JobIngestionController {
-  constructor(
-    private jobIngestionService: JobIngestionService,
-    private rateLimitService: RateLimitService,
-  ) {}
+  constructor(private readonly jobIngestionService: JobIngestionService) {}
 
-  @Get('sources')
-  @UsePipes(new ZodValidationPipe(paginationSchema))
-  async getJobSources(@Request() req, @Query() query: PaginationQueryDto) {
-    return this.jobIngestionService.getJobSources(req.user.id, query);
-  }
-
-  @Get('sources/available')
-  async getAvailableIntegrations(@Request() req) {
-    return {
-      data: this.jobIngestionService.getAvailableIntegrations(),
-    };
-  }
-
-  @Get('sources/:id')
-  async getJobSourceById(@Request() req, @Param('id') id: string) {
-    return this.jobIngestionService.getJobSourceById(req.user.id, id);
-  }
-
-  @Post('sources')
-  async createJobSource(@Request() req, @Body() body: any) {
-    return this.jobIngestionService.createJobSource(req.user.id, body);
-  }
-
-  @Put('sources/:id')
-  async updateJobSource(@Request() req, @Param('id') id: string, @Body() body: any) {
-    return this.jobIngestionService.updateJobSource(req.user.id, id, body);
-  }
-
-  @Delete('sources/:id')
-  async deleteJobSource(@Request() req, @Param('id') id: string) {
-    return this.jobIngestionService.deleteJobSource(req.user.id, id);
-  }
-
-  @Get('postings')
-  @UsePipes(new ZodValidationPipe(paginationSchema.merge(jobFilterSchema)))
-  async getJobPostings(@Request() req, @Query() query: PaginationQueryDto & JobFilterDto) {
-    return this.jobIngestionService.getJobPostings(req.user.id, query);
-  }
-
-  @Get('postings/:id')
-  async getJobPostingById(@Request() req, @Param('id') id: string) {
-    return this.jobIngestionService.getJobPostingById(req.user.id, id);
-  }
-
-  @Post('ingest')
-  async ingestJobs(@Request() req, @Body() body: { sourceId: string; keywords?: string; location?: string }) {
-    return this.jobIngestionService.ingestJobs(req.user.id, body);
-  }
-
-  @Post('ingest/:sourceId')
-  async ingestFromIntegration(
-    @Request() req,
-    @Param('sourceId') sourceId: string,
-    @Body() body: { keywords?: string; location?: string; page?: number; limit?: number },
+  @Get()
+  async getJobPostings(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('jobType') jobType?: string,
+    @Query('remote') remote?: string,
   ) {
-    return this.jobIngestionService.ingestFromIntegration(req.user.id, sourceId, body);
+    return this.jobIngestionService.getJobPostings({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      search,
+      jobType,
+      remote,
+    });
   }
 
-  @Get('ingestion-status')
-  async getIngestionStatus(@Request() req, @Query('jobId') jobId: string) {
-    return this.jobIngestionService.getIngestionStatus(req.user.id, jobId);
+  @Get(':id')
+  async getJobPostingById(@Param('id') id: string) {
+    return this.jobIngestionService.getJobPostingById(id);
   }
 
-  @Get('ingestion-logs')
-  @UsePipes(new ZodValidationPipe(paginationSchema))
-  async getIngestionLogs(@Request() req, @Query() query: PaginationQueryDto) {
-    return this.jobIngestionService.getJobSources(req.user.id, query);
+  @Post('search')
+  async searchJobs(@Body() body: any) {
+    return this.jobIngestionService.searchJobs(body);
   }
 
-  @Get('ingestion-stats')
-  async getIngestionStats(@Request() req) {
-    return {
-      totalSources: 11,
-      activeSources: 8,
-      totalJobsIngested: 15234,
-      todayJobsIngested: 342,
-      duplicatesFiltered: 1256,
-      failedIngestions: 23,
-    };
-  }
-
-  @Get('rate-limits')
-  async getRateLimits(@Request() req) {
-    const rateLimits = this.rateLimitService.getAllIntegrations();
-    return { data: rateLimits };
-  }
-
-  @Get('rate-limits/:sourceId')
-  async getRateLimitBySource(@Request() req, @Param('sourceId') sourceId: string) {
-    return this.rateLimitService.checkRateLimit(sourceId);
-  }
-
-  @Get('costs')
-  async getCosts(@Request() req) {
-    return this.rateLimitService.getTotalCost();
-  }
-
-  @Get('costs/:sourceId')
-  async getCostBySource(@Request() req, @Param('sourceId') sourceId: string) {
-    return this.rateLimitService.getCostInfo(sourceId);
-  }
-
-  @Get('optimization')
-  async getOptimization(@Request() req) {
-    return {
-      recommendations: this.rateLimitService.getOptimizationRecommendations(),
-    };
-  }
-
-  @Post('optimize')
-  async runOptimization(@Request() req) {
-    // Implement actual optimization logic
-    return { message: 'Optimization complete', applied: [] };
-  }
-
-  @Get('risk-matrix')
-  async getRiskMatrix(@Request() req) {
-    return this.jobIngestionService.getRiskMatrix();
-  }
-
-  @Get('cost-checklist')
-  async getCostChecklist(@Request() req) {
-    return this.jobIngestionService.getCostChecklist();
-  }
-
-  @Get('10-source-plan')
-  async get10SourcePlan(@Request() req) {
-    return this.jobIngestionService.get10SourcePlan();
+  @Get('sources/list')
+  async getJobSources(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.jobIngestionService.getJobSources({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+    });
   }
 }

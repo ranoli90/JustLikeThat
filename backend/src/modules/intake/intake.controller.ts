@@ -1,18 +1,26 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { IntakeService } from './intake.service';
-import { intakeFormSchema, IntakeFormData, DerivedProfile } from '../../dto/intake/intake-questions.zod';
-import { ZodValidationPipe } from '../../pipes/zod.pipe';
 import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 
-@Controller('api/intake')
+@Controller('intake')
+@UseGuards(JwtAuthGuard)
 export class IntakeController {
   constructor(private readonly intakeService: IntakeService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
-  processIntakeForm(
-    @Body(new ZodValidationPipe(intakeFormSchema)) data: IntakeFormData,
-  ): DerivedProfile {
-    return this.intakeService.processIntakeData(data);
+  async submitIntake(@Request() req: any, @Body() body: any) {
+    return this.intakeService.submitIntake(req.user.id, body);
+  }
+
+  @Get('status')
+  async getIntakeStatus(@Request() req: any) {
+    return this.intakeService.getIntakeStatus(req.user.id);
   }
 }

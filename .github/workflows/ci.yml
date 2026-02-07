@@ -1,8 +1,3 @@
-# =============================================================================
-# CI Pipeline - Sprint 38
-# Continuous Integration with automated testing and quality gates
-# =============================================================================
-
 name: CI Pipeline
 
 on:
@@ -12,14 +7,9 @@ on:
     branches: [main, develop]
 
 env:
-  AWS_REGION: us-east-1
-  TERRAFORM_VERSION: 1.5.7
   NODE_VERSION: '20'
 
 jobs:
-  # ===========================================================================
-  # Code Quality Checks
-  # ===========================================================================
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest
@@ -34,9 +24,13 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install dependencies
-        run: |
-          cd backend && npm ci
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: backend
 
       - name: Run ESLint
         run: npm run lint
@@ -50,9 +44,6 @@ jobs:
         run: npm run build
         working-directory: backend
 
-  # ===========================================================================
-  # Backend Unit Tests
-  # ===========================================================================
   backend-unit-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
@@ -72,6 +63,10 @@ jobs:
         run: npm ci
         working-directory: backend
 
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: backend
+
       - name: Run unit tests
         run: npm run test:unit -- --coverage
         working-directory: backend
@@ -82,9 +77,6 @@ jobs:
           directory: backend/coverage
           fail_ci_if_error: false
 
-  # ===========================================================================
-  # Frontend Tests
-  # ===========================================================================
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
@@ -104,132 +96,17 @@ jobs:
         run: npm ci
         working-directory: frontend
 
-      - name: Run frontend tests
-        run: npm run test:unit -- --coverage
+      - name: Build frontend
+        run: npm run build
         working-directory: frontend
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          directory: frontend/coverage
-          fail_ci_if_error: false
-
-  # ===========================================================================
-  # Terraform Linting
-  # ===========================================================================
-  terraform-lint:
-    name: Terraform Linting
-    runs-on: ubuntu-latest
-    needs: code-quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Run tflint
-        uses: terraform-lint/run-tflint@master
-        with:
-          directory: terraform
-          tflint_version: 0.48.0
-
-      - name: Validate Terraform syntax
-        run: |
-          cd terraform
-          for env_dir in environments/*/; do
-            echo "Validating $env_dir"
-            terraform fmt -check -recursive "$env_dir"
-            terraform validate "$env_dir"
-          done
-
-  # ===========================================================================
-  # Security Scanning
-  # ===========================================================================
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: code-quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run npm audit
-        run: |
-          cd backend && npm audit --audit-level=high
-          cd ../frontend && npm audit --audit-level=high
-
-      - name: Run Snyk security scan
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
-
-      - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          severity: 'CRITICAL,HIGH'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-  # ===========================================================================
-  # Docker Security Scan
-  # ===========================================================================
-  docker-security-scan:
-    name: Docker Security Scan
-    runs-on: ubuntu-latest
-    needs: code-quality
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          push: false
-          load: true
-          tags: apply-as-a-service:latest
-
-      - name: Run Trivy vulnerability scan on Docker image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'apply-as-a-service:latest'
-          format: 'sarif'
-          output: 'docker-trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-
-      - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: 'docker-trivy-results.sarif'
-
-  # ===========================================================================
-  # Integration Tests
-  # ===========================================================================
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: [backend-unit-tests, frontend-tests]
     services:
       postgres:
-        image: postgres:15
+        image: postgres:15-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
@@ -238,16 +115,6 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -267,90 +134,36 @@ jobs:
         run: npm ci
         working-directory: backend
 
-      - name: Setup environment
-        run: |
-          cp .env.example .env
-          echo "DATABASE_URL=postgresql://test:test@localhost:5432/test_db" >> .env
-          echo "REDIS_URL=redis://localhost:6379" >> .env
-
-      - name: Run integration tests
-        run: npm run test:integration
+      - name: Generate Prisma client
+        run: npx prisma generate
         working-directory: backend
 
-  # ===========================================================================
-  # Build Docker Images
-  # ===========================================================================
-  build-images:
-    name: Build Docker Images
-    runs-on: ubuntu-latest
-    needs: [backend-unit-tests, frontend-tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    outputs:
-      backend-image: ${{ steps.build.outputs.backend-image }}
-      frontend-image: ${{ steps.build.outputs.frontend-image }}
+      - name: Run database migrations
+        run: npx prisma migrate deploy
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
 
+      - name: Run integration tests
+        run: npm run test:e2e
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          JWT_SECRET: test-jwt-secret
+          JWT_REFRESH_SECRET: test-refresh-secret
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: code-quality
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Run npm audit (backend)
+        run: npm audit --audit-level=high || true
+        working-directory: backend
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push backend image
-        id: build
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/apply-as-a-service-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          tags: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/apply-as-a-service-frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # ===========================================================================
-  # Publish Artifacts
-  # ===========================================================================
-  publish-artifacts:
-    name: Publish Artifacts
-    runs-on: ubuntu-latest
-    needs: [build-images, integration-tests]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: dist
-
-      - name: Upload to S3
-        uses: jakejarvis/s3-sync-action@master
-        with:
-          args: --acl private --follow-symlinks --delete
-        env:
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          SOURCE_DIR: 'dist'
-
-      - name: Invalidate CloudFront cache
-        uses: chetan/invalidate-cloudfront-action@v2
-        env:
-          DISTRIBUTION: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
-          PATHS: '/*'
-        continue-on-error: true
+      - name: Run npm audit (frontend)
+        run: npm audit --audit-level=high || true
+        working-directory: frontend

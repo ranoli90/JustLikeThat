@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
 
 class ApiService {
   private client: AxiosInstance;
@@ -138,7 +138,7 @@ class ApiService {
   }
 
   async changePassword(currentPassword: string, newPassword: string) {
-    const response = await this.client.put('/user/password', {
+    const response = await this.client.put('/auth/password', {
       currentPassword,
       newPassword,
     });
@@ -229,8 +229,8 @@ class ApiService {
   }
 
   // Matching endpoints
-  async getMatches(personaId: string) {
-    const response = await this.client.get(`/matching/jobs/${personaId}`);
+  async getMatches(limit?: number) {
+    const response = await this.client.get('/matching/jobs', { params: { limit } });
     return response.data;
   }
 
@@ -239,59 +239,62 @@ class ApiService {
     return response.data;
   }
 
-  // Tailoring endpoints
-  async tailorResume(personaId: string, jobId: string, options?: Record<string, unknown>) {
-    const response = await this.client.post('/tailoring/tailor', {
-      personaId,
-      jobPostingId: jobId,
-      documentType: 'RESUME',
-      ...options,
-    });
+  // Profile endpoints
+  async getProfile() {
+    const response = await this.client.get('/profile');
     return response.data;
   }
 
-  async tailorCoverLetter(personaId: string, jobId: string, options?: Record<string, unknown>) {
-    const response = await this.client.post('/tailoring/tailor', {
-      personaId,
-      jobPostingId: jobId,
-      documentType: 'COVER_LETTER',
-      ...options,
-    });
+  async updateCandidateProfile(data: Record<string, unknown>) {
+    const response = await this.client.put('/profile', data);
     return response.data;
   }
 
-  // Interview endpoints
-  async startInterview() {
-    const response = await this.client.post('/interview/start');
+  async getPersonas() {
+    const response = await this.client.get('/profile/personas');
     return response.data;
   }
 
-  async submitInterviewAnswer(sessionId: string, questionId: string, answer: string) {
-    const response = await this.client.post(`/interview/${sessionId}/answer`, {
-      questionId,
-      answer,
-    });
+  async createPersona(data: Record<string, unknown>) {
+    const response = await this.client.post('/profile/personas', data);
     return response.data;
   }
 
-  async completeInterview(sessionId: string) {
-    const response = await this.client.post(`/interview/${sessionId}/complete`);
+  // Automation endpoints
+  async getAutomationRules(params?: { page?: number }) {
+    const response = await this.client.get('/automation/rules', { params });
     return response.data;
   }
 
-  async getInterviewResults(sessionId: string) {
-    const response = await this.client.get(`/interview/${sessionId}/results`);
+  async createAutomationRule(data: Record<string, unknown>) {
+    const response = await this.client.post('/automation/rules', data);
+    return response.data;
+  }
+
+  async executeAutomationRule(id: string) {
+    const response = await this.client.post(`/automation/rules/${id}/execute`);
+    return response.data;
+  }
+
+  async toggleAutomationRule(id: string, isActive: boolean) {
+    const response = await this.client.post(`/automation/rules/${id}/toggle`, { isActive });
+    return response.data;
+  }
+
+  // Application stats
+  async getApplicationStats() {
+    const response = await this.client.get('/applications/stats');
     return response.data;
   }
 
   // Intake endpoints
   async submitIntake(data: Record<string, unknown>) {
-    const response = await this.client.post('/intake/submit', data);
+    const response = await this.client.post('/intake', data);
     return response.data;
   }
 
-  async getIntakeProgress() {
-    const response = await this.client.get('/intake/progress');
+  async getIntakeStatus() {
+    const response = await this.client.get('/intake/status');
     return response.data;
   }
 

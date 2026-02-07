@@ -2,64 +2,45 @@ import {
   Controller,
   Get,
   Put,
-  Delete,
-  UseGuards,
-  Request,
   Param,
   Query,
-  UsePipes,
-  Body,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 import { NotificationService } from './notification.service';
-import { paginationSchema } from '../../dto/common/pagination.zod';
-import type { PaginationQueryDto } from '../../dto/common/pagination.zod';
-import { ZodValidationPipe } from '../../pipes/zod.pipe';
+import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 
-@Controller('api/notifications')
+@Controller('notifications')
+@UseGuards(JwtAuthGuard)
 export class NotificationController {
-  constructor(private notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard)
-  @UsePipes(new ZodValidationPipe(paginationSchema))
-  async getNotifications(@Request() req, @Query() query: PaginationQueryDto) {
-    return this.notificationService.getNotifications(req.user.id, query);
+  async findAll(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('unreadOnly') unreadOnly?: string,
+  ) {
+    return this.notificationService.findAll(req.user.id, {
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 20,
+      unreadOnly: unreadOnly === 'true',
+    });
   }
 
-  @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  async getNotificationById(@Request() req, @Param('id') id: string) {
-    return this.notificationService.getNotificationById(req.user.id, id);
+  @Get('unread-count')
+  async getUnreadCount(@Request() req: any) {
+    return this.notificationService.getUnreadCount(req.user.id);
   }
 
   @Put(':id/read')
-  @UseGuards(JwtAuthGuard)
-  async markAsRead(@Request() req, @Param('id') id: string) {
+  async markAsRead(@Request() req: any, @Param('id') id: string) {
     return this.notificationService.markAsRead(req.user.id, id);
   }
 
   @Put('read-all')
-  @UseGuards(JwtAuthGuard)
-  async markAllAsRead(@Request() req) {
+  async markAllAsRead(@Request() req: any) {
     return this.notificationService.markAllAsRead(req.user.id);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  async deleteNotification(@Request() req, @Param('id') id: string) {
-    return this.notificationService.deleteNotification(req.user.id, id);
-  }
-
-  @Delete('clear')
-  @UseGuards(JwtAuthGuard)
-  async clearNotifications(@Request() req, @Body() body: { readOnly?: boolean }) {
-    return this.notificationService.clearNotifications(req.user.id, body.readOnly);
-  }
-
-  @Get('unread-count')
-  @UseGuards(JwtAuthGuard)
-  async getUnreadCount(@Request() req) {
-    return this.notificationService.getUnreadCount(req.user.id);
   }
 }

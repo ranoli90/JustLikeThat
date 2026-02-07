@@ -26,7 +26,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Initialize auth state from stored token
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('auth_token');
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
       if (token) {
         try {
           const response = await fetch(`${API_URL}/auth/me`, {
@@ -165,6 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       localStorage.setItem('auth_token', data.accessToken);
+      if (data.refreshToken) {
+        localStorage.setItem('refresh_token', data.refreshToken);
+      }
 
       return data.accessToken;
     } catch (err) {

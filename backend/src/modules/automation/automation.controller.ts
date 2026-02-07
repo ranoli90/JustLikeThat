@@ -4,67 +4,59 @@ import {
   Post,
   Put,
   Delete,
+  Param,
   Body,
+  Query,
   UseGuards,
   Request,
-  Param,
-  Query,
-  UsePipes,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 import { AutomationService } from './automation.service';
-import { paginationSchema } from '../../dto/common/pagination.zod';
-import type { PaginationQueryDto } from '../../dto/common/pagination.zod';
-import { createAutomationSchema, updateAutomationSchema } from '../../dto/automation/create-automation.zod';
-import type { CreateAutomationDto, UpdateAutomationDto } from '../../dto/automation/create-automation.zod';
-import { ZodValidationPipe } from '../../pipes/zod.pipe';
+import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 
-@Controller('api/automation')
+@Controller('automation')
+@UseGuards(JwtAuthGuard)
 export class AutomationController {
-  constructor(private automationService: AutomationService) {}
+  constructor(private readonly automationService: AutomationService) {}
 
-  @Get('configs')
-  @UseGuards(JwtAuthGuard)
-  @UsePipes(new ZodValidationPipe(paginationSchema))
-  async getAutomationConfigs(@Request() req, @Query() query: PaginationQueryDto) {
-    return this.automationService.getAutomationConfigs(req.user.id, query);
+  @Post('rules')
+  async createRule(@Request() req: any, @Body() body: any) {
+    return this.automationService.createRule(req.user.id, body);
   }
 
-  @Get('configs/:id')
-  @UseGuards(JwtAuthGuard)
-  async getAutomationConfigById(@Request() req, @Param('id') id: string) {
-    return this.automationService.getAutomationConfigById(req.user.id, id);
+  @Get('rules')
+  async getRules(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.automationService.getRules(req.user.id, {
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+    });
   }
 
-  @Post('configs')
-  @UseGuards(JwtAuthGuard)
-  @UsePipes(new ZodValidationPipe(createAutomationSchema))
-  async createAutomationConfig(@Request() req, @Body() createAutomationDto: CreateAutomationDto) {
-    return this.automationService.createAutomationConfig(req.user.id, createAutomationDto);
+  @Get('rules/:id')
+  async getRuleById(@Request() req: any, @Param('id') id: string) {
+    return this.automationService.getRuleById(req.user.id, id);
   }
 
-  @Put('configs/:id')
-  @UseGuards(JwtAuthGuard)
-  @UsePipes(new ZodValidationPipe(updateAutomationSchema))
-  async updateAutomationConfig(@Request() req, @Param('id') id: string, @Body() updateAutomationDto: UpdateAutomationDto) {
-    return this.automationService.updateAutomationConfig(req.user.id, id, updateAutomationDto);
+  @Put('rules/:id')
+  async updateRule(@Request() req: any, @Param('id') id: string, @Body() body: any) {
+    return this.automationService.updateRule(req.user.id, id, body);
   }
 
-  @Delete('configs/:id')
-  @UseGuards(JwtAuthGuard)
-  async deleteAutomationConfig(@Request() req, @Param('id') id: string) {
-    return this.automationService.deleteAutomationConfig(req.user.id, id);
+  @Delete('rules/:id')
+  async deleteRule(@Request() req: any, @Param('id') id: string) {
+    return this.automationService.deleteRule(req.user.id, id);
   }
 
-  @Post('configs/:id/toggle')
-  @UseGuards(JwtAuthGuard)
-  async toggleAutomationConfig(@Request() req, @Param('id') id: string, @Body() body: { enabled: boolean }) {
-    return this.automationService.toggleAutomationConfig(req.user.id, id, body.enabled);
+  @Post('rules/:id/toggle')
+  async toggleRule(@Request() req: any, @Param('id') id: string, @Body('isActive') isActive: boolean) {
+    return this.automationService.toggleRule(req.user.id, id, isActive);
   }
 
-  @Get('configs/:id/preview')
-  @UseGuards(JwtAuthGuard)
-  async previewAutomationConfig(@Request() req, @Param('id') id: string) {
-    return this.automationService.previewAutomationConfig(req.user.id, id);
+  @Post('rules/:id/execute')
+  async executeRule(@Request() req: any, @Param('id') id: string) {
+    return this.automationService.executeRule(req.user.id, id);
   }
 }

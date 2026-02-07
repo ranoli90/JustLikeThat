@@ -1,240 +1,178 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Application, ApplicationState, AutonomyMode } from '../../entities/application.entity';
-import { ApplicationStateMachine } from './application.state-machine';
-import { ApplicationPreventionService } from './application-prevention.service';
-import { PaginatedResponse, PaginationQuery } from '../../common/utils';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
+import { ApplicationState } from '@prisma/client';
 
-/**
- * Application query parameters
- */
-export interface ApplicationQuery extends PaginationQuery {
-  state?: ApplicationState;
-}
+const MAX_ACTIVE_APPLICATIONS = 20;
 
-/**
- * Application service for managing job applications
- */
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  DRAFT: ['PENDING_TAILORING', 'WITHDRAWN'],
+  PENDING_TAILORING: ['TAILORED', 'WITHDRAWN'],
+  TAILORED: ['PENDING_SUBMISSION', 'WITHDRAWN'],
+  PENDING_SUBMISSION: ['SUBMITTED', 'WITHDRAWN'],
+  SUBMITTED: ['INTERVIEWING', 'REJECTED', 'WITHDRAWN'],
+  INTERVIEWING: ['OFFER', 'REJECTED', 'WITHDRAWN'],
+  OFFER: ['ACCEPTED', 'REJECTED', 'WITHDRAWN'],
+  ACCEPTED: [],
+  REJECTED: [],
+  WITHDRAWN: [],
+};
+
 @Injectable()
 export class ApplicationService {
-  /** Maximum concurrent applications per user */
-  private static readonly CONCURRENCY_CAP = 20;
+  private readonly logger = new Logger(ApplicationService.name);
 
-  /**
-   * Creates a new ApplicationService instance
-   * @param applicationRepository - Repository for applications
-   * @param stateMachine - State machine for application transitions
-   * @param preventionService - Service for preventing duplicate applications
-   */
   constructor(
-    @InjectRepository(Application)
-    private applicationRepository: Repository<Application>,
-    private stateMachine: ApplicationStateMachine,
-    private preventionService: ApplicationPreventionService,
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
   ) {}
 
-  /**
-   * Retrieves paginated applications for a user
-   * @param userId - The user ID
-   * @param query - Query parameters for filtering and pagination
-   * @returns Paginated list of applications
-   */
-  async getApplications(userId: string, query: ApplicationQuery = {}): Promise<PaginatedResponse<Application>> {
-    const { page = 1, size = 10, state } = query;
-    const queryBuilder = this.applicationRepository.createQueryBuilder('application')
-      .where('application.userId = :userId', { userId });
-
-    if (state) {
-      queryBuilder.andWhere('application.state = :state', { state });
+  async create(userId: string, data: { jobPostingId: string; autonomyMode?: string }) {
+    const existing = await this.prisma.application.findUnique({
+      where: { userId_jobPostingId: { userId, jobPostingId: data.jobPostingId } },
+    });
+    if (existing) {
+      throw new ConflictException('You have already applied to this job');
     }
 
-    const [data, total] = await queryBuilder
-      .orderBy('application.createdAt', 'DESC')
-      .skip((page - 1) * size)
-      .take(size)
-      .getManyAndCount();
-
-    return {
-      data,
-      pagination: {
-        page: Number(page),
-        size: Number(size),
-        total,
-        pages: Math.ceil(total / size),
+    const activeCount = await this.prisma.application.count({
+      where: {
+        userId,
+        state: {
+          in: [
+            ApplicationState.DRAFT,
+            ApplicationState.PENDING_TAILORING,
+            ApplicationState.TAILORED,
+            ApplicationState.PENDING_SUBMISSION,
+            ApplicationState.SUBMITTED,
+          ],
+        },
       },
-    };
-  }
-
-  /**
-   * Retrieves a specific application by ID
-   * @param userId - The user ID
-   * @param id - The application ID
-   * @returns The application or null if not found
-   */
-  async getApplicationById(userId: string, id: string): Promise<Application | null> {
-    return this.applicationRepository.findOne({
-      where: { id, userId },
     });
-  }
+    if (activeCount >= MAX_ACTIVE_APPLICATIONS) {
+      throw new BadRequestException(
+        `Maximum of ${MAX_ACTIVE_APPLICATIONS} active applications reached`,
+      );
+    }
 
-  /**
-   * Creates a new application with prevention checks
-   * @param userId - The user ID
-   * @param createApplicationDto - The application data
-   * @returns The created application
-   */
-  async createApplication(userId: string, createApplicationDto: Partial<Application>): Promise<Application> {
-    await this.preventApplicationCreation(userId, createApplicationDto.jobPostingId);
+    const jobPosting = await this.prisma.jobPosting.findUnique({
+      where: { id: data.jobPostingId },
+    });
+    if (!jobPosting) throw new NotFoundException('Job posting not found');
 
-    const application = this.applicationRepository.create({
-      ...createApplicationDto,
-      userId,
-      state: ApplicationState.DRAFT,
-      autonomyMode: AutonomyMode.MANUAL,
+    const application = await this.prisma.application.create({
+      data: {
+        userId,
+        jobPostingId: data.jobPostingId,
+        autonomyMode: (data.autonomyMode as any) || 'MANUAL',
+        state: 'DRAFT',
+      },
+      include: { jobPosting: true },
     });
 
-    return this.applicationRepository.save(application);
+    this.logger.log(`Application created: ${application.id} for user ${userId}`);
+    return application;
   }
 
-  // Update an application (only if in modifiable state)
-  async updateApplication(userId: string, id: string, updateApplicationDto: any) {
-    const application = await this.getApplicationById(userId, id);
+  async findAll(userId: string, query: { page?: number; limit?: number; state?: string }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const where: any = { userId };
+    if (query.state) where.state = query.state;
 
-    if (!application) {
-      throw new BadRequestException('Application not found');
-    }
-
-    if (!this.stateMachine.allowsModifications(application.state)) {
-      throw new BadRequestException('Cannot modify application in current state');
-    }
-
-    // Update application
-    Object.assign(application, updateApplicationDto);
-    return this.applicationRepository.save(application);
-  }
-
-  // Delete an application (only if in draft or early states)
-  async deleteApplication(userId: string, id: string) {
-    const application = await this.getApplicationById(userId, id);
-
-    if (!application) {
-      throw new BadRequestException('Application not found');
-    }
-
-    if (!this.stateMachine.allowsModifications(application.state)) {
-      throw new BadRequestException('Cannot delete application in current state');
-    }
-
-    return this.applicationRepository.remove(application);
-  }
-
-  // Submit application
-  async submitApplication(userId: string, id: string) {
-    const application = await this.getApplicationById(userId, id);
-
-    if (!application) {
-      throw new BadRequestException('Application not found');
-    }
-
-    const newState = this.stateMachine.transition(application.state, ApplicationState.SUBMITTED);
-    application.state = newState;
-    application.submittedAt = new Date();
-
-    return this.applicationRepository.save(application);
-  }
-
-  // Transition application state with validation
-  async transitionState(userId: string, id: string, targetState: ApplicationState) {
-    const application = await this.getApplicationById(userId, id);
-
-    if (!application) {
-      throw new BadRequestException('Application not found');
-    }
-
-    const newState = this.stateMachine.transition(application.state, targetState);
-    application.state = newState;
-
-    if (targetState === ApplicationState.WITHDRAWN) {
-      application.withdrawnAt = new Date();
-    } else if (targetState === ApplicationState.SUBMITTED) {
-      application.submittedAt = new Date();
-    }
-
-    return this.applicationRepository.save(application);
-  }
-
-  // Pause application (set to draft from active states)
-  async pauseApplication(userId: string, id: string) {
-    const application = await this.getApplicationById(userId, id);
-
-    if (!application) {
-      throw new BadRequestException('Application not found');
-    }
-
-    if (application.state === ApplicationState.DRAFT) {
-      return application;
-    }
-
-    const newState = this.stateMachine.transition(application.state, ApplicationState.DRAFT);
-    application.state = newState;
-
-    return this.applicationRepository.save(application);
-  }
-
-  // Cancel application (withdraw)
-  async cancelApplication(userId: string, id: string) {
-    return this.transitionState(userId, id, ApplicationState.WITHDRAWN);
-  }
-
-  // Set autonomy mode
-  async setAutonomyMode(userId: string, id: string, autonomyMode: AutonomyMode) {
-    const application = await this.getApplicationById(userId, id);
-
-    if (!application) {
-      throw new BadRequestException('Application not found');
-    }
-
-    application.autonomyMode = autonomyMode;
-    return this.applicationRepository.save(application);
-  }
-
-  // Get application stats
-  async getApplicationStats(userId: string) {
-    const [total, submitted, rejected, interviewing, offer] = await Promise.all([
-      this.applicationRepository.count({ where: { userId } }),
-      this.applicationRepository.count({ where: { userId, state: ApplicationState.SUBMITTED } }),
-      this.applicationRepository.count({ where: { userId, state: ApplicationState.REJECTED } }),
-      this.applicationRepository.count({ where: { userId, state: ApplicationState.ACCEPTED } }), // For now, we'll count accepted as interviewing/offer
-      this.applicationRepository.count({ where: { userId, state: ApplicationState.ACCEPTED } }),
+    const [data, total] = await Promise.all([
+      this.prisma.application.findMany({
+        where,
+        include: { jobPosting: true },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.application.count({ where }),
     ]);
 
     return {
-      total,
-      submitted,
-      rejected,
-      interviewing,
-      offer,
+      data,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
 
-  // Check concurrency limits
-  private async checkConcurrencyLimit(userId: string): Promise<void> {
-    const activeApplicationsCount = await this.applicationRepository.count({
-      where: {
-        userId,
-        state: In(['PENDING_TAILORING', 'TAILORED', 'PENDING_APPLICATION', 'SUBMITTED']),
-      },
+  async findById(userId: string, id: string) {
+    const application = await this.prisma.application.findFirst({
+      where: { id, userId },
+      include: { jobPosting: true },
     });
-
-    if (activeApplicationsCount >= ApplicationService.CONCURRENCY_CAP) {
-      throw new BadRequestException('Concurrency limit exceeded');
-    }
+    if (!application) throw new NotFoundException('Application not found');
+    return application;
   }
 
-  // Check all prevention rules before application creation
-  private async preventApplicationCreation(userId: string, jobPostingId: string): Promise<void> {
-    await this.preventionService.checkAll(userId, jobPostingId);
-    await this.checkConcurrencyLimit(userId);
+  async transitionState(userId: string, id: string, newState: ApplicationState) {
+    const application = await this.prisma.application.findFirst({
+      where: { id, userId },
+      include: { jobPosting: true },
+    });
+    if (!application) throw new NotFoundException('Application not found');
+
+    const allowedTransitions = VALID_TRANSITIONS[application.state] || [];
+    if (!allowedTransitions.includes(newState)) {
+      throw new BadRequestException(
+        `Cannot transition from ${application.state} to ${newState}`,
+      );
+    }
+
+    const updateData: any = { state: newState };
+    if (newState === 'SUBMITTED') updateData.submittedAt = new Date();
+    if (newState === 'WITHDRAWN') updateData.withdrawnAt = new Date();
+
+    const updated = await this.prisma.application.update({
+      where: { id },
+      data: updateData,
+      include: { jobPosting: true },
+    });
+
+    await this.notificationService.create(userId, {
+      type: 'IN_APP',
+      title: 'Application Updated',
+      message: `Your application for ${application.jobPosting.title} is now ${newState}`,
+    });
+
+    this.logger.log(`Application ${id} transitioned to ${newState}`);
+    return updated;
+  }
+
+  async submitApplication(userId: string, id: string) {
+    return this.transitionState(userId, id, ApplicationState.SUBMITTED);
+  }
+
+  async withdrawApplication(userId: string, id: string) {
+    return this.transitionState(userId, id, ApplicationState.WITHDRAWN);
+  }
+
+  async getStats(userId: string) {
+    const [total, submitted, interviewing, offers, rejected, withdrawn] =
+      await Promise.all([
+        this.prisma.application.count({ where: { userId } }),
+        this.prisma.application.count({ where: { userId, state: 'SUBMITTED' } }),
+        this.prisma.application.count({ where: { userId, state: 'INTERVIEWING' } }),
+        this.prisma.application.count({ where: { userId, state: 'OFFER' } }),
+        this.prisma.application.count({ where: { userId, state: 'REJECTED' } }),
+        this.prisma.application.count({ where: { userId, state: 'WITHDRAWN' } }),
+      ]);
+
+    return { total, submitted, interviewing, offers, rejected, withdrawn };
+  }
+
+  async update(userId: string, id: string, data: any) {
+    const application = await this.prisma.application.findFirst({
+      where: { id, userId },
+    });
+    if (!application) throw new NotFoundException('Application not found');
+    return this.prisma.application.update({ where: { id }, data });
   }
 }

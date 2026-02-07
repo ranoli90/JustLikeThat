@@ -3,85 +3,70 @@ import {
   Get,
   Post,
   Put,
-  Delete,
+  Param,
   Body,
+  Query,
   UseGuards,
   Request,
-  Param,
-  Query,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 import { ApplicationService } from './application.service';
-import type { CreateApplicationDto, UpdateApplicationDto } from '../../dto/application/create-application.zod';
-import { ApplicationState, AutonomyMode } from '../../entities/application.entity';
+import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 
-@Controller('api/applications')
+@Controller('applications')
+@UseGuards(JwtAuthGuard)
 export class ApplicationController {
-  constructor(private applicationService: ApplicationService) {}
+  constructor(private readonly applicationService: ApplicationService) {}
+
+  @Post()
+  async create(@Request() req: any, @Body() body: any) {
+    return this.applicationService.create(req.user.id, body);
+  }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
-  async getApplications(@Request() req, @Query() query: any) {
-    return this.applicationService.getApplications(req.user.id, query);
+  async findAll(
+    @Request() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('state') state?: string,
+  ) {
+    return this.applicationService.findAll(req.user.id, {
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? parseInt(limit, 10) : 10,
+      state,
+    });
+  }
+
+  @Get('stats')
+  async getStats(@Request() req: any) {
+    return this.applicationService.getStats(req.user.id);
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  async getApplicationById(@Request() req, @Param('id') id: string) {
-    return this.applicationService.getApplicationById(req.user.id, id);
-  }
-
-  @Post()
-  @UseGuards(JwtAuthGuard)
-  async createApplication(@Request() req, @Body() createApplicationDto: CreateApplicationDto) {
-    return this.applicationService.createApplication(req.user.id, createApplicationDto);
+  async findById(@Request() req: any, @Param('id') id: string) {
+    return this.applicationService.findById(req.user.id, id);
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
-  async updateApplication(@Request() req, @Param('id') id: string, @Body() updateApplicationDto: UpdateApplicationDto) {
-    return this.applicationService.updateApplication(req.user.id, id, updateApplicationDto);
-  }
-
-  @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  async deleteApplication(@Request() req, @Param('id') id: string) {
-    return this.applicationService.deleteApplication(req.user.id, id);
+  async update(@Request() req: any, @Param('id') id: string, @Body() body: any) {
+    return this.applicationService.update(req.user.id, id, body);
   }
 
   @Post(':id/submit')
-  @UseGuards(JwtAuthGuard)
-  async submitApplication(@Request() req, @Param('id') id: string) {
+  async submit(@Request() req: any, @Param('id') id: string) {
     return this.applicationService.submitApplication(req.user.id, id);
   }
 
+  @Post(':id/withdraw')
+  async withdraw(@Request() req: any, @Param('id') id: string) {
+    return this.applicationService.withdrawApplication(req.user.id, id);
+  }
+
   @Post(':id/transition')
-  @UseGuards(JwtAuthGuard)
-  async transitionState(@Request() req, @Param('id') id: string, @Body() body: { state: ApplicationState }) {
-    return this.applicationService.transitionState(req.user.id, id, body.state);
-  }
-
-  @Post(':id/pause')
-  @UseGuards(JwtAuthGuard)
-  async pauseApplication(@Request() req, @Param('id') id: string) {
-    return this.applicationService.pauseApplication(req.user.id, id);
-  }
-
-  @Post(':id/cancel')
-  @UseGuards(JwtAuthGuard)
-  async cancelApplication(@Request() req, @Param('id') id: string) {
-    return this.applicationService.cancelApplication(req.user.id, id);
-  }
-
-  @Put(':id/autonomy')
-  @UseGuards(JwtAuthGuard)
-  async setAutonomyMode(@Request() req, @Param('id') id: string, @Body() body: { autonomyMode: AutonomyMode }) {
-    return this.applicationService.setAutonomyMode(req.user.id, id, body.autonomyMode);
-  }
-
-  @Get('stats/summary')
-  @UseGuards(JwtAuthGuard)
-  async getApplicationStats(@Request() req) {
-    return this.applicationService.getApplicationStats(req.user.id);
+  async transition(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body('state') state: any,
+  ) {
+    return this.applicationService.transitionState(req.user.id, id, state);
   }
 }

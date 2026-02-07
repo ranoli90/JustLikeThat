@@ -1,42 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Persona } from '../../entities/persona.entity';
-import { JobPosting } from '../../entities/job-posting.entity';
-import { UserPreferences } from '../../entities/user-preferences.entity';
-import { MatchingController } from './matching.controller';
 import { MatchingService } from './matching.service';
-import { EmbeddingService } from './embedding.service';
-import { CulturalFitService } from './cultural-fit.service';
-import { CareerTrajectoryService } from './career-trajectory.service';
-import { LearningToRankService } from './learning-to-rank.service';
-import { RecommendationService } from './recommendation.service';
-import { MatchQualityService } from './match-quality.service';
-import { PreferenceModelingService } from './preference-modeling.service';
+import { MatchingController } from './matching.controller';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Persona, JobPosting, UserPreferences]),
-  ],
+  providers: [MatchingService],
   controllers: [MatchingController],
-  providers: [
-    MatchingService,
-    EmbeddingService,
-    CulturalFitService,
-    CareerTrajectoryService,
-    LearningToRankService,
-    RecommendationService,
-    MatchQualityService,
-    PreferenceModelingService,
-  ],
-  exports: [
-    MatchingService,
-    EmbeddingService,
-    CulturalFitService,
-    CareerTrajectoryService,
-    LearningToRankService,
-    RecommendationService,
-    MatchQualityService,
-    PreferenceModelingService,
-  ],
+  exports: [MatchingService],
 })
 export class MatchingModule {}

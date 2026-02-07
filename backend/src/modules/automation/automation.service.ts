@@ -1,110 +1,173 @@
-import { Injectable } from '@nestjs/common';
-import { PaginatedResponse, PaginationQuery } from '../../common/utils';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { ApplicationService } from '../application/application.service';
+import { NotificationService } from '../notification/notification.service';
 
-/**
- * Automation configuration entity
- */
-export interface AutomationConfig {
-  id: string;
-  userId: string;
-  name: string;
-  description: string;
-  trigger: string;
-  conditions: Record<string, unknown>[];
-  actions: Record<string, unknown>[];
-  enabled: boolean;
-  lastRunAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-/**
- * Automation query parameters
- */
-export interface AutomationQuery extends PaginationQuery {}
-
-/**
- * Service for managing automation configurations
- */
 @Injectable()
 export class AutomationService {
-  /**
-   * Retrieves paginated automation configurations for a user
-   * @param userId - The user ID
-   * @param query - Pagination query parameters
-   * @returns Paginated list of automation configurations
-   */
-  async getAutomationConfigs(userId: string, query: AutomationQuery = {}): Promise<PaginatedResponse<AutomationConfig>> {
-    return {
-      data: [],
-      pagination: {
-        page: query.page || 1,
-        size: query.size || 10,
-        total: 0,
-        pages: 0,
+  private readonly logger = new Logger(AutomationService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private applicationService: ApplicationService,
+    private notificationService: NotificationService,
+  ) {}
+
+  async createRule(userId: string, data: any) {
+    const rule = await this.prisma.automationRule.create({
+      data: {
+        userId,
+        name: data.name,
+        description: data.description,
+        trigger: data.trigger,
+        conditions: data.conditions,
+        actions: data.actions,
       },
+    });
+    this.logger.log(`Automation rule created: ${rule.id} for user ${userId}`);
+    return rule;
+  }
+
+  async getRules(userId: string, query: { page?: number; limit?: number }) {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+
+    const [data, total] = await Promise.all([
+      this.prisma.automationRule.findMany({
+        where: { userId },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: { _count: { select: { executions: true } } },
+      }),
+      this.prisma.automationRule.count({ where: { userId } }),
+    ]);
+
+    return {
+      data,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
 
-  /**
-   * Retrieves a specific automation configuration by ID
-   * @param userId - The user ID
-   * @param id - The automation config ID
-   * @returns The automation configuration or null
-   */
-  async getAutomationConfigById(userId: string, id: string): Promise<AutomationConfig | null> {
-    return null;
+  async getRuleById(userId: string, id: string) {
+    const rule = await this.prisma.automationRule.findFirst({
+      where: { id, userId },
+      include: {
+        executions: { take: 10, orderBy: { createdAt: 'desc' } },
+      },
+    });
+    if (!rule) throw new NotFoundException('Automation rule not found');
+    return rule;
   }
 
-  /**
-   * Creates a new automation configuration
-   * @param userId - The user ID
-   * @param createAutomationDto - The automation configuration data
-   * @returns The created automation configuration
-   */
-  async createAutomationConfig(userId: string, createAutomationDto: Partial<AutomationConfig>): Promise<AutomationConfig> {
-    return {} as AutomationConfig;
+  async updateRule(userId: string, id: string, data: any) {
+    const rule = await this.prisma.automationRule.findFirst({ where: { id, userId } });
+    if (!rule) throw new NotFoundException('Automation rule not found');
+    return this.prisma.automationRule.update({ where: { id }, data });
   }
 
-  /**
-   * Updates an existing automation configuration
-   * @param userId - The user ID
-   * @param id - The automation config ID
-   * @param updateAutomationDto - The update data
-   * @returns The updated automation configuration
-   */
-  async updateAutomationConfig(userId: string, id: string, updateAutomationDto: Partial<AutomationConfig>): Promise<AutomationConfig | null> {
-    return null;
+  async deleteRule(userId: string, id: string) {
+    const rule = await this.prisma.automationRule.findFirst({ where: { id, userId } });
+    if (!rule) throw new NotFoundException('Automation rule not found');
+    await this.prisma.automationRule.delete({ where: { id } });
+    return { deleted: true };
   }
 
-  /**
-   * Deletes an automation configuration
-   * @param userId - The user ID
-   * @param id - The automation config ID
-   * @returns Deletion result
-   */
-  async deleteAutomationConfig(userId: string, id: string): Promise<{ deleted: boolean }> {
-    return { deleted: false };
+  async toggleRule(userId: string, id: string, isActive: boolean) {
+    const rule = await this.prisma.automationRule.findFirst({ where: { id, userId } });
+    if (!rule) throw new NotFoundException('Automation rule not found');
+    return this.prisma.automationRule.update({
+      where: { id },
+      data: { isActive },
+    });
   }
 
-  /**
-   * Toggles an automation configuration enabled state
-   * @param userId - The user ID
-   * @param id - The automation config ID
-   * @param enabled - The new enabled state
-   * @returns The updated automation configuration
-   */
-  async toggleAutomationConfig(userId: string, id: string, enabled: boolean): Promise<AutomationConfig | null> {
-    return null;
+  async executeRule(userId: string, id: string) {
+    const rule = await this.prisma.automationRule.findFirst({
+      where: { id, userId },
+    });
+    if (!rule) throw new NotFoundException('Automation rule not found');
+    if (!rule.isActive) throw new BadRequestException('Rule is not active');
+
+    const conditions = rule.conditions as any;
+    const matchingJobs = await this.findMatchingJobs(conditions);
+
+    const results: any[] = [];
+    for (const job of matchingJobs) {
+      try {
+        const existing = await this.prisma.application.findUnique({
+          where: { userId_jobPostingId: { userId, jobPostingId: job.id } },
+        });
+        if (existing) continue;
+
+        const application = await this.applicationService.create(userId, {
+          jobPostingId: job.id,
+          autonomyMode: 'SEMI_AUTOMATIC',
+        });
+
+        await this.prisma.automationExecution.create({
+          data: {
+            automationRuleId: id,
+            applicationId: application.id,
+            status: 'SUCCESS',
+            input: { jobPostingId: job.id },
+            output: { applicationId: application.id },
+          },
+        });
+
+        results.push({ jobId: job.id, applicationId: application.id, status: 'created' });
+      } catch (error: any) {
+        await this.prisma.automationExecution.create({
+          data: {
+            automationRuleId: id,
+            status: 'FAILED',
+            input: { jobPostingId: job.id },
+            error: error.message,
+          },
+        });
+        results.push({ jobId: job.id, status: 'failed', error: error.message });
+      }
+    }
+
+    await this.prisma.automationRule.update({
+      where: { id },
+      data: {
+        executionCount: { increment: 1 },
+        lastExecutedAt: new Date(),
+      },
+    });
+
+    const created = results.filter((r) => r.status === 'created').length;
+    await this.notificationService.create(userId, {
+      type: 'IN_APP',
+      title: 'Automation Complete',
+      message: `Auto-applied to ${created} of ${matchingJobs.length} matching jobs`,
+    });
+
+    this.logger.log(`Automation rule ${id} executed: ${created} applications created`);
+    return { ruleId: id, totalMatched: matchingJobs.length, applied: created, results };
   }
 
-  /**
-   * Previews an automation configuration execution
-   * @param userId - The user ID
-   * @param id - The automation config ID
-   * @returns Preview result
-   */
-  async previewAutomationConfig(userId: string, id: string): Promise<Record<string, unknown>> {
-    return {};
+  private async findMatchingJobs(conditions: any) {
+    const where: any = { isExpired: false };
+    if (conditions?.jobTypes) where.jobType = { in: conditions.jobTypes };
+    if (conditions?.locations) where.location = { in: conditions.locations };
+    if (conditions?.remotePreference) where.remotePreference = conditions.remotePreference;
+    if (conditions?.keywords) {
+      where.OR = [
+        { title: { contains: conditions.keywords, mode: 'insensitive' } },
+        { description: { contains: conditions.keywords, mode: 'insensitive' } },
+      ];
+    }
+    return this.prisma.jobPosting.findMany({
+      where,
+      take: 20,
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }

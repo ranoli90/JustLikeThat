@@ -1,18 +1,14 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { User } from '../../entities/user.entity';
-import { CandidateProfile } from '../../entities/candidate-profile.entity';
-import { UserPreferences } from '../../entities/user-preferences.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, CandidateProfile, UserPreferences]),
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -22,6 +18,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       }),
       inject: [ConfigService],
     }),
+    NotificationModule,
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

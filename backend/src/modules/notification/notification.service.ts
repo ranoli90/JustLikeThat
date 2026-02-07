@@ -1,120 +1,70 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationType } from '@prisma/client';
 
-/**
- * Notification entity structure
- */
-export interface Notification {
-  id: string;
-  userId: string;
-  type: string;
-  title: string;
-  message: string;
-  data?: Record<string, unknown>;
-  read: boolean;
-  createdAt: Date;
-  readAt?: Date;
-}
-
-/**
- * Pagination query parameters
- */
-export interface NotificationQuery {
-  page?: number;
-  size?: number;
-  unreadOnly?: boolean;
-}
-
-/**
- * Paginated notification response
- */
-export interface NotificationPageResponse {
-  data: Notification[];
-  pagination: {
-    page: number;
-    size: number;
-    total: number;
-    pages: number;
-  };
-}
-
-/**
- * Service for managing user notifications
- */
 @Injectable()
 export class NotificationService {
-  /**
-   * Retrieves paginated notifications for a user
-   * @param userId - The user ID
-   * @param query - Pagination and filter query
-   * @returns Paginated list of notifications
-   */
-  async getNotifications(userId: string, query: NotificationQuery = {}): Promise<NotificationPageResponse> {
-    return {
-      data: [],
-      pagination: {
-        page: query.page || 1,
-        size: query.size || 10,
-        total: 0,
-        pages: 0,
+  private readonly logger = new Logger(NotificationService.name);
+
+  constructor(private prisma: PrismaService) {}
+
+  async create(
+    userId: string,
+    data: { type: NotificationType; title: string; message: string; data?: any },
+  ) {
+    const notification = await this.prisma.notification.create({
+      data: {
+        userId,
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        data: data.data ?? undefined,
       },
+    });
+    this.logger.log(`Notification created for user ${userId}: ${data.title}`);
+    return notification;
+  }
+
+  async findAll(userId: string, query: { page?: number; limit?: number; unreadOnly?: boolean }) {
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    const where: any = { userId };
+    if (query.unreadOnly) where.isRead = false;
+
+    const [data, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    return {
+      data,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
     };
   }
 
-  /**
-   * Retrieves a specific notification by ID
-   * @param userId - The user ID
-   * @param id - The notification ID
-   * @returns The notification or null if not found
-   */
-  async getNotificationById(userId: string, id: string): Promise<Notification | null> {
-    return null;
+  async markAsRead(userId: string, id: string) {
+    return this.prisma.notification.updateMany({
+      where: { id, userId },
+      data: { isRead: true },
+    });
   }
 
-  /**
-   * Marks a notification as read
-   * @param userId - The user ID
-   * @param id - The notification ID
-   * @returns Updated notification
-   */
-  async markAsRead(userId: string, id: string): Promise<Notification | null> {
-    return null;
+  async markAllAsRead(userId: string) {
+    return this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true },
+    });
   }
 
-  /**
-   * Marks all notifications as read for a user
-   * @param userId - The user ID
-   * @returns Update result
-   */
-  async markAllAsRead(userId: string): Promise<{ updated: number }> {
-    return { updated: 0 };
-  }
-
-  /**
-   * Deletes a notification
-   * @param userId - The user ID
-   * @param id - The notification ID
-   * @returns Deletion result
-   */
-  async deleteNotification(userId: string, id: string): Promise<{ deleted: boolean }> {
-    return { deleted: false };
-  }
-
-  /**
-   * Clears notifications for a user
-   * @param userId - The user ID
-   * @param readOnly - If true, only clear read notifications
-   * @returns Clear result
-   */
-  async clearNotifications(userId: string, readOnly?: boolean): Promise<{ cleared: number }> {
-    return { cleared: 0 };
-  }
-
-  /**
-   * Gets the unread notification count for a user
-   * @param userId - The user ID
-   * @returns Unread count
-   */
-  async getUnreadCount(userId: string): Promise<{ count: number }> {
-    return { count: 0 };
+  async getUnreadCount(userId: string) {
+    const count = await this.prisma.notification.count({
+      where: { userId, isRead: false },
+    });
+    return { count };
   }
 }

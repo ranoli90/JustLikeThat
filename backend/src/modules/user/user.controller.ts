@@ -1,37 +1,42 @@
-import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common';
-import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
+import {
+  Controller,
+  Get,
+  Put,
+  Delete,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { UserService } from './user.service';
-import { UpdateUserDto } from '../../dto/user/update-user.dto';
-import { UpdateUserPreferencesDto } from '../../dto/user/update-preferences.dto';
+import { JwtAuthGuard } from '../../guards/jwt-auth.guard';
 
-@Controller('api/users')
+@Controller('user')
+@UseGuards(JwtAuthGuard)
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(private readonly userService: UserService) {}
 
-  @Get('me')
-  @UseGuards(JwtAuthGuard)
-  async getCurrentUser(@Request() req) {
-    return this.userService.getCurrentUser(req.user.id);
+  @Get('profile')
+  async getProfile(@Request() req: any) {
+    return this.userService.findById(req.user.id);
   }
 
-  @Put('me')
-  @UseGuards(JwtAuthGuard)
-  async updateCurrentUser(@Request() req, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.updateCurrentUser(req.user.id, updateUserDto);
+  @Put('profile')
+  async updateProfile(@Request() req: any, @Body() body: any) {
+    return this.userService.updateProfile(req.user.id, body);
   }
 
-  @Get('me/preferences')
-  @UseGuards(JwtAuthGuard)
-  async getCurrentUserPreferences(@Request() req) {
-    return this.userService.getCurrentUserPreferences(req.user.id);
+  @Get('preferences')
+  async getPreferences(@Request() req: any) {
+    return this.userService.getPreferences(req.user.id);
   }
 
-  @Put('me/preferences')
-  @UseGuards(JwtAuthGuard)
-  async updateCurrentUserPreferences(
-    @Request() req,
-    @Body() updatePreferencesDto: UpdateUserPreferencesDto,
-  ) {
-    return this.userService.updateCurrentUserPreferences(req.user.id, updatePreferencesDto);
+  @Put('preferences')
+  async updatePreferences(@Request() req: any, @Body() body: any) {
+    return this.userService.updatePreferences(req.user.id, body);
+  }
+
+  @Delete('account')
+  async deleteAccount(@Request() req: any) {
+    return this.userService.deleteAccount(req.user.id);
   }
 }
