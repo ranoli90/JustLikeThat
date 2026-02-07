@@ -64,38 +64,38 @@ export const RegionDashboard: React.FC = () => {
 
   if (regionsLoading || healthLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Global Region Dashboard</h1>
         <p className="text-gray-600">Monitor and manage multi-region deployment</p>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Total Regions</div>
           <div className="text-2xl font-bold text-gray-900">{regions?.length || 0}</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Active Regions</div>
           <div className="text-2xl font-bold text-green-600">
             {regions?.filter(r => r.status === 'active').length || 0}
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Avg Latency</div>
           <div className="text-2xl font-bold text-blue-600">
             {healthData?.reduce((sum, h) => sum + h.latency, 0) / (healthData?.length || 1) || 0}ms
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Cloud Providers</div>
           <div className="text-2xl font-bold text-purple-600">
             {new Set(regions?.map(r => r.cloudProvider)).size || 0}
@@ -104,18 +104,18 @@ export const RegionDashboard: React.FC = () => {
       </div>
 
       {/* Region Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {regions?.map((region) => {
           const health = healthData?.find(h => h.regionId === region.regionId);
           return (
             <div
               key={region.regionId}
-              className={`bg-white rounded-lg shadow-md p-4 cursor-pointer transition-all hover:shadow-lg ${
+              className={`cursor-pointer rounded-lg bg-white p-4 shadow-md transition-all hover:shadow-lg ${
                 selectedRegion === region.regionId ? 'ring-2 ring-blue-500' : ''
               }`}
               onClick={() => setSelectedRegion(region.regionId)}
             >
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <span className="text-2xl">{getProviderIcon(region.cloudProvider)}</span>
                   <div>
@@ -123,7 +123,7 @@ export const RegionDashboard: React.FC = () => {
                     <div className="text-xs text-gray-500">{region.regionName}</div>
                   </div>
                 </div>
-                <div className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(region.status)}`}>
+                <div className={`rounded-full px-2 py-1 text-xs text-white ${getStatusColor(region.status)}`}>
                   {region.status}
                 </div>
               </div>
@@ -131,7 +131,7 @@ export const RegionDashboard: React.FC = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Endpoint:</span>
-                  <span className="text-gray-700 truncate max-w-[150px]">{region.endpoint}</span>
+                  <span className="max-w-[150px] truncate text-gray-700">{region.endpoint}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Priority:</span>
@@ -146,7 +146,7 @@ export const RegionDashboard: React.FC = () => {
               </div>
 
               {health && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="mt-3 border-t border-gray-100 pt-3">
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
                       <div className="text-gray-500">Latency</div>
@@ -166,7 +166,7 @@ export const RegionDashboard: React.FC = () => {
 
               <div className="mt-3 flex space-x-2">
                 <button
-                  className="flex-1 bg-blue-500 text-white text-sm py-2 rounded hover:bg-blue-600 transition-colors"
+                  className="flex-1 rounded bg-blue-500 py-2 text-sm text-white transition-colors hover:bg-blue-600"
                   onClick={(e) => {
                     e.stopPropagation();
                     // View details
@@ -176,7 +176,7 @@ export const RegionDashboard: React.FC = () => {
                 </button>
                 {region.status === 'active' && !region.isPrimary && (
                   <button
-                    className="flex-1 bg-red-500 text-white text-sm py-2 rounded hover:bg-red-600 transition-colors"
+                    className="flex-1 rounded bg-red-500 py-2 text-sm text-white transition-colors hover:bg-red-600"
                     onClick={(e) => {
                       e.stopPropagation();
                       failoverMutation.mutate({
@@ -197,13 +197,13 @@ export const RegionDashboard: React.FC = () => {
 
       {/* Failover Modal */}
       {failoverMutation.isPending && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-bold mb-2">Failover in Progress</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-black/50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6">
+            <h3 className="mb-2 text-lg font-bold">Failover in Progress</h3>
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+              <div className="size-12 animate-spin rounded-full border-b-2 border-blue-500"></div>
             </div>
-            <p className="text-gray-600 text-center">Please wait while failover is executing...</p>
+            <p className="text-center text-gray-600">Please wait while failover is executing...</p>
           </div>
         </div>
       )}

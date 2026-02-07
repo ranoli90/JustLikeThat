@@ -12,7 +12,7 @@ export function registerMemoryPressureHandler(
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           if (entry.entryType === 'memory') {
-            const memory = entry as any;
+            const memory = entry as PerformanceEntry & { usedJSHeapSize: number; jsHeapSizeLimit: number };
             const used = memory.usedJSHeapSize;
             const limit = memory.jsHeapSizeLimit;
             const usage = used / limit;
@@ -127,7 +127,7 @@ export function createBatchProcessor<T>(
   flush: () => void;
 } {
   const { batchSize = 100, delay = 16 } = options;
-  let queue: T[] = [];
+  const queue: T[] = [];
   let timeoutId: ReturnType<typeof setTimeout> | null = null;
   
   const flush = () => {
@@ -221,7 +221,7 @@ export function cleanupMediaElement(
     }
     
     if ('srcObject' in element) {
-      (element as any).srcObject = null;
+      (element as HTMLMediaElement & { srcObject: unknown }).srcObject = null;
     }
     
     const parent = element.parentNode;
@@ -242,14 +242,14 @@ export function createWebSocketManager<T = any>(
 ): {
   connect: () => void;
   disconnect: () => void;
-  send: (data: any) => void;
+  send: (data: unknown) => void;
   isConnected: () => boolean;
 } {
   const { reconnectDelay = 3000, maxRetries = 5 } = options;
   let socket: WebSocket | null = null;
   let retries = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  let messageQueue: any[] = [];
+  const messageQueue: unknown[] = [];
   
   const connect = () => {
     if (socket?.readyState === WebSocket.OPEN) return;
@@ -275,7 +275,7 @@ export function createWebSocketManager<T = any>(
       
       socket.onclose = () => {
         if (retries < maxRetries) {
-          retries++;
+          retries += 1;
           reconnectTimer = setTimeout(connect, reconnectDelay * retries);
         }
       };
@@ -299,7 +299,7 @@ export function createWebSocketManager<T = any>(
     }
   };
   
-  const send = (data: any) => {
+  const send = (data: unknown) => {
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify(data));
     } else {

@@ -60,8 +60,9 @@ class ApiService {
               this.failedRequests.forEach((request) => request.resolve(accessToken));
               this.failedRequests = [];
 
-              originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-              return this.client(originalRequest);
+              const newRequest = { ...originalRequest };
+              newRequest.headers = { ...originalRequest.headers, Authorization: `Bearer ${accessToken}` };
+              return this.client(newRequest);
             } catch (refreshError) {
               this.failedRequests.forEach((request) =>
                 request.reject(refreshError as Error)
@@ -80,8 +81,9 @@ class ApiService {
           return new Promise<string>((resolve, reject) => {
             this.failedRequests.push({
               resolve: (token: string) => {
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-                resolve(this.client(originalRequest));
+                const newRequest = { ...originalRequest };
+                newRequest.headers = { ...originalRequest.headers, Authorization: `Bearer ${token}` };
+                resolve(this.client(newRequest));
               },
               reject: (error: Error) => {
                 reject(error);
@@ -320,12 +322,12 @@ class ApiService {
     return response.data;
   }
 
-  async post<T>(url: string, data?: Record<string, unknown>, config?: Record<string, unknown>): Promise<T> {
+  async post<T>(url: string, data?: unknown, config?: Record<string, unknown>): Promise<T> {
     const response = await this.client.post<T>(url, data, config);
     return response.data;
   }
 
-  async put<T>(url: string, data?: Record<string, unknown>): Promise<T> {
+  async put<T>(url: string, data?: unknown): Promise<T> {
     const response = await this.client.put<T>(url, data);
     return response.data;
   }
@@ -338,7 +340,7 @@ class ApiService {
   async request<T>(config: {
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     url: string;
-    data?: Record<string, unknown>;
+    data?: unknown;
     params?: Record<string, unknown>;
     headers?: Record<string, string>;
   }): Promise<T> {

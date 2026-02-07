@@ -94,18 +94,18 @@ export const LogViewer: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Log Viewer</h1>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="mb-6 text-2xl font-bold">Log Viewer</h1>
 
       {/* Filters */}
-      <div className="mb-6 bg-white p-4 rounded-lg shadow">
+      <div className="mb-6 rounded-lg bg-white p-4 shadow">
         <div className="flex flex-wrap gap-4">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium mb-1">Service</label>
+          <div className="min-w-[200px] flex-1">
+            <label className="mb-1 block text-sm font-medium">Service</label>
             <select
               value={selectedService}
               onChange={(e) => setSelectedService(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full rounded border p-2"
             >
               <option value="">All Services</option>
               {services.map((service) => (
@@ -114,11 +114,11 @@ export const LogViewer: React.FC = () => {
             </select>
           </div>
           <div className="w-40">
-            <label className="block text-sm font-medium mb-1">Level</label>
+            <label className="mb-1 block text-sm font-medium">Level</label>
             <select
               value={selectedLevel}
               onChange={(e) => setSelectedLevel(e.target.value)}
-              className="w-full p-2 border rounded"
+              className="w-full rounded border p-2"
             >
               <option value="">All</option>
               <option value="debug">Debug</option>
@@ -127,20 +127,20 @@ export const LogViewer: React.FC = () => {
               <option value="error">Error</option>
             </select>
           </div>
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-sm font-medium mb-1">Search</label>
+          <div className="min-w-[200px] flex-1">
+            <label className="mb-1 block text-sm font-medium">Search</label>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search logs..."
-              className="w-full p-2 border rounded"
+              className="w-full rounded border p-2"
             />
           </div>
           <div className="flex items-end">
             <button
               onClick={fetchLogs}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
             >
               Search
             </button>
@@ -150,43 +150,43 @@ export const LogViewer: React.FC = () => {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+        <div className="mb-6 grid grid-cols-5 gap-4">
+          <div className="rounded-lg bg-white p-4 shadow">
             <div className="text-2xl font-bold">{stats.total}</div>
-            <div className="text-gray-500 text-sm">Total Logs</div>
+            <div className="text-sm text-gray-500">Total Logs</div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="rounded-lg bg-white p-4 shadow">
             <div className="text-2xl font-bold text-gray-500">{stats.byLevel?.debug || 0}</div>
-            <div className="text-gray-500 text-sm">Debug</div>
+            <div className="text-sm text-gray-500">Debug</div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="rounded-lg bg-white p-4 shadow">
             <div className="text-2xl font-bold text-blue-500">{stats.byLevel?.info || 0}</div>
-            <div className="text-gray-500 text-sm">Info</div>
+            <div className="text-sm text-gray-500">Info</div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="rounded-lg bg-white p-4 shadow">
             <div className="text-2xl font-bold text-yellow-500">{stats.byLevel?.warn || 0}</div>
-            <div className="text-gray-500 text-sm">Warn</div>
+            <div className="text-sm text-gray-500">Warn</div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="rounded-lg bg-white p-4 shadow">
             <div className="text-2xl font-bold text-red-500">{stats.byLevel?.error || 0}</div>
-            <div className="text-gray-500 text-sm">Error</div>
+            <div className="text-sm text-gray-500">Error</div>
           </div>
         </div>
       )}
 
       {/* Log List */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Logs</h2>
+      <div className="rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">Logs</h2>
         {loading ? (
-          <div className="text-center py-4">Loading...</div>
+          <div className="py-4 text-center">Loading...</div>
         ) : logs.length === 0 ? (
-          <div className="text-center py-4 text-gray-500">No logs found</div>
+          <div className="py-4 text-center text-gray-500">No logs found</div>
         ) : (
-          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+          <div className="max-h-[600px] space-y-2 overflow-y-auto">
             {logs.map((log) => (
               <div
                 key={log.id}
-                className={`p-3 rounded border-l-4 ${
+                className={`rounded border-l-4 p-3 ${
                   log.level === 'error'
                     ? 'border-red-500 bg-red-50'
                     : log.level === 'warn'
@@ -197,12 +197,12 @@ export const LogViewer: React.FC = () => {
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${getLevelColor(log.level)}`}>
+                  <span className={`rounded px-2 py-0.5 text-xs font-medium ${getLevelColor(log.level)}`}>
                     {log.level.toUpperCase()}
                   </span>
                   <div className="flex-1">
                     <div className="text-sm">{log.message}</div>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                    <div className="mt-1 flex items-center gap-4 text-xs text-gray-500">
                       <span>{log.serviceName}</span>
                       {log.traceId && (
                         <span className="font-mono">trace: {log.traceId.substring(0, 8)}...</span>
@@ -212,7 +212,7 @@ export const LogViewer: React.FC = () => {
                   </div>
                 </div>
                 {log.metadata && Object.keys(log.metadata).length > 0 && (
-                  <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto">
+                  <pre className="mt-2 overflow-x-auto rounded bg-gray-100 p-2 text-xs">
                     {JSON.stringify(log.metadata, null, 2)}
                   </pre>
                 )}

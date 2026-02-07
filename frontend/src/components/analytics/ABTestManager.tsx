@@ -274,7 +274,7 @@ const CreateExperimentModal: React.FC<CreateExperimentModalProps> = ({
                   type="number"
                   value={variant.trafficWeight}
                   onChange={(e) =>
-                    updateVariant(index, { trafficWeight: parseInt(e.target.value) })
+                    updateVariant(index, { trafficWeight: parseInt(e.target.value, 10) })
                   }
                   placeholder="Weight"
                   min="0"

@@ -42,9 +42,9 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({
 
   const toggleMetric = (metricId: string) => {
     setMetrics((prev) =>
-      prev.includes(metricId)
+      (prev.includes(metricId)
         ? prev.filter((m) => m !== metricId)
-        : [...prev, metricId]
+        : [...prev, metricId])
     );
   };
 
@@ -56,7 +56,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({
       config: {
         template: selectedTemplate,
         metrics,
-        dateRange: dateRange as any,
+        dateRange: { start: dateRange.start, end: dateRange.end },
       },
       schedule,
     });
@@ -221,7 +221,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({
                   <select
                     value={schedule.frequency}
                     onChange={(e) =>
-                      setSchedule({ ...schedule, frequency: e.target.value as any })
+                      setSchedule({ ...schedule, frequency: e.target.value as ReportSchedule['frequency'] })
                     }
                   >
                     <option value="daily">Daily</option>
@@ -256,7 +256,7 @@ export const ReportBuilder: React.FC<ReportBuilderProps> = ({
                       max="28"
                       value={schedule.dayOfMonth || 1}
                       onChange={(e) =>
-                        setSchedule({ ...schedule, dayOfMonth: parseInt(e.target.value) })
+                        setSchedule({ ...schedule, dayOfMonth: parseInt(e.target.value, 10) })
                       }
                     />
                   </div>

@@ -57,21 +57,82 @@ SimpleAsThat/
 
 ## Prerequisites
 
-- Node.js 18+ and npm
-- PostgreSQL
-- AWS account (for S3 storage)
-- Email provider (SMTP server)
+Before running the application, ensure you have the following installed:
+
+- **Node.js 18+** and npm
+- **PostgreSQL 13+** database server
+- **Redis** (optional, for caching and sessions)
+- **ClickHouse** (optional, for analytics)
+- **Docker & Docker Compose** (for local development with all services)
+
+## Environment Configuration
+
+### Frontend Environment Variables
+
+Copy the example environment file and configure it:
+
+```bash
+cd frontend
+cp .env.example .env.local
+```
+
+Required variables:
+- `NEXT_PUBLIC_API_URL`: Backend API URL (default: `http://localhost:3001`)
+
+### Backend Environment Variables
+
+Copy the example environment file and configure it:
+
+```bash
+cd backend
+cp .env.example .env
+```
+
+**Required variables:**
+- `DATABASE_URL`: PostgreSQL connection string
+- `JWT_SECRET`: JWT signing secret (minimum 32 characters)
+- `JWT_REFRESH_SECRET`: Refresh token signing secret (minimum 32 characters)
+- `ENCRYPTION_KEY`: Data encryption key (minimum 32 characters)
+- `ENCRYPTION_SALT`: Encryption salt string
+- `MFA_ENCRYPTION_KEY`: MFA encryption key (minimum 32 characters)
+
+**Database setup:**
+```bash
+# Create PostgreSQL database
+createdb simpleasthat
+
+# Run Prisma migrations
+npm run prisma:migrate
+
+# Generate Prisma client
+npm run prisma:generate
+```
+
+**Optional services:**
+- **Redis**: For session storage and caching
+- **ClickHouse**: For advanced analytics
+- **AWS S3**: For file storage
+- **SMTP**: For email notifications
 
 ## Setup Instructions
 
-### 1. Clone the Repository
+### Option 1: Docker Compose (Recommended for Development)
 
 ```bash
-git clone <repository-url>
-cd SimpleAsThat
+# Start all services
+docker-compose up -d
+
+# The application will be available at:
+# Frontend: http://localhost:3000
+# Backend: http://localhost:3001
+# Database: localhost:5432
+# Redis: localhost:6379
+# ClickHouse: localhost:8123
 ```
 
-### 2. Backend Setup
+### Option 2: Manual Setup
+
+#### 1. Backend Setup
 
 ```bash
 cd backend
@@ -79,18 +140,19 @@ cd backend
 # Install dependencies
 npm install
 
-# Copy environment variables
+# Configure environment
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env with your database and service configurations
 
-# Create database and run migrations
+# Database setup
 npm run prisma:migrate
+npm run prisma:generate
 
 # Start development server
 npm run start:dev
 ```
 
-### 3. Frontend Setup
+#### 2. Frontend Setup
 
 ```bash
 cd frontend
@@ -98,13 +160,52 @@ cd frontend
 # Install dependencies
 npm install
 
-# Copy environment variables
-cp .env.local.example .env.local
-# Edit .env.local with your configuration
+# Configure environment
+cp .env.example .env.local
+# Edit .env.local with your API URL
 
 # Start development server
 npm run dev
 ```
+
+## Development
+
+### Available Scripts
+
+#### Backend
+```bash
+npm run start:dev      # Development server with hot reload
+npm run start:prod     # Production server
+npm run build          # Build for production
+npm run test           # Run tests
+npm run prisma:studio  # Open Prisma Studio for database management
+npm run prisma:migrate # Apply database migrations
+```
+
+#### Frontend
+```bash
+npm run dev            # Development server
+npm run build          # Build for production
+npm run start          # Production server
+npm run lint           # Run ESLint
+npm run test           # Run tests
+```
+
+## API Documentation
+
+- **Swagger UI**: `http://localhost:3001/api`
+- **API Schema**: `http://localhost:3001/api-json`
+
+## Database Management
+
+Use Prisma Studio for database management:
+
+```bash
+cd backend
+npm run prisma:studio
+```
+
+This opens a web interface at `http://localhost:5555` for viewing and editing data.
 
 ## Development
 

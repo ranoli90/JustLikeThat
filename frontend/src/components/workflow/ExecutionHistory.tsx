@@ -84,7 +84,7 @@ const ExecutionHistory: React.FC<ExecutionHistoryProps> = ({
         },
       ];
 
-      let filtered = mockExecutions;
+      const filtered = mockExecutions;
       if (workflowId) {
         filtered = filtered.filter(e => e.workflowId === workflowId);
       }

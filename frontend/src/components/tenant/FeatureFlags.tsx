@@ -74,7 +74,7 @@ export const FeatureFlags: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Feature Flags</h1>
         <Button onClick={() => fetch(`/api/v1/tenants/${tenantId}/features/initialize`, { method: 'POST' }).then(loadFeatures)}>
           Initialize Defaults
@@ -82,7 +82,7 @@ export const FeatureFlags: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4 mb-6">
+      <div className="mb-6 flex gap-4">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -94,7 +94,7 @@ export const FeatureFlags: React.FC<{ tenantId: string }> = ({ tenantId }) => {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`px-3 py-2 rounded text-sm capitalize ${filter === f ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
+              className={`rounded px-3 py-2 text-sm capitalize ${filter === f ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
             >
               {f}
             </button>
@@ -111,33 +111,33 @@ export const FeatureFlags: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         ) : (
           filteredFeatures.map(feature => (
             <Card key={feature.id} className="p-4">
-              <div className="flex justify-between items-start">
+              <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3">
                     <h3 className="font-semibold">{feature.featureName}</h3>
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-500">
                       {feature.featureKey}
                     </span>
                   </div>
                   {feature.config?.description && (
-                    <p className="text-gray-500 text-sm mt-1">{feature.config.description}</p>
+                    <p className="mt-1 text-sm text-gray-500">{feature.config.description}</p>
                   )}
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label className="relative inline-flex cursor-pointer items-center">
                   <input
                     type="checkbox"
                     checked={feature.isEnabled}
                     onChange={() => toggleFeature(feature.featureKey, feature.isEnabled)}
-                    className="sr-only peer"
+                    className="peer sr-only"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:size-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
                 </label>
               </div>
 
               {feature.isEnabled && feature.config && (
-                <div className="mt-4 pt-4 border-t">
-                  <h4 className="text-sm font-medium mb-2">Configuration</h4>
-                  <pre className="bg-gray-50 p-3 rounded text-xs overflow-x-auto">
+                <div className="mt-4 border-t pt-4">
+                  <h4 className="mb-2 text-sm font-medium">Configuration</h4>
+                  <pre className="overflow-x-auto rounded bg-gray-50 p-3 text-xs">
                     {JSON.stringify(feature.config, null, 2)}
                   </pre>
                 </div>

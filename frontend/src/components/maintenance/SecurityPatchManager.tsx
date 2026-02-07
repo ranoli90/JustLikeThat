@@ -154,10 +154,10 @@ export const SecurityPatchManager: React.FC = () => {
                 <p style={{ color: '#6b7280', fontSize: '14px', margin: '4px 0' }}>Affected: {patch.affectedSystems.join(', ')}</p>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: getSeverityColor(patch.severity) + '20', color: getSeverityColor(patch.severity) }}>
+                <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: `${getSeverityColor(patch.severity)  }20`, color: getSeverityColor(patch.severity) }}>
                   {patch.severity}
                 </span>
-                <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: getStatusColor(patch.status) + '20', color: getStatusColor(patch.status) }}>
+                <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: `${getStatusColor(patch.status)  }20`, color: getStatusColor(patch.status) }}>
                   {patch.status}
                 </span>
                 {patch.status === 'available' && (

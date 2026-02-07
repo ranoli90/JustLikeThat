@@ -29,7 +29,7 @@ export const JobBoardConnector: React.FC<JobBoardConnectorProps> = ({ onConnect 
     setError(null);
 
     try {
-      const response = await fetch('/api/v1/integrations/job-boards/connect/' + selectedProvider.toLowerCase(), {
+      const response = await fetch(`/api/v1/integrations/job-boards/connect/${  selectedProvider.toLowerCase()}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
@@ -98,7 +98,7 @@ export const JobBoardConnector: React.FC<JobBoardConnectorProps> = ({ onConnect 
                 cursor: 'pointer',
                 border: selectedProvider === provider.id ? '2px solid #0d6efd' : '1px solid #dee2e6',
               }}
-              onClick={() => setSelectedProvider(provider.id)}
+              onClick={() => { setSelectedProvider(provider.id); }}
             >
               <Card.Body>
                 <div className="d-flex align-items-center mb-2">

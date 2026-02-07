@@ -66,7 +66,7 @@ export const ERPConnector: React.FC<ERPConnectorProps> = ({ onConnect }) => {
     try {
       // API call would go here
       await new Promise(resolve => setTimeout(resolve, 1000));
-      alert('Connection successful!');
+      console.log('Connection successful!');
     } catch (err) {
       setError('Connection test failed');
     } finally {
@@ -184,7 +184,7 @@ export const ERPConnector: React.FC<ERPConnectorProps> = ({ onConnect }) => {
               value={config.syncSettings?.frequency || 'hourly'}
               onChange={e => setConfig({
                 ...config,
-                syncSettings: { ...config.syncSettings!, frequency: e.target.value as any }
+                syncSettings: { ...config.syncSettings!, frequency: e.target.value as ERPConfig['syncSettings']['frequency'] }
               })}
             >
               <option value="realtime">Real-time</option>

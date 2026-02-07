@@ -57,7 +57,6 @@ import { EnterpriseAiModule } from './modules/enterprise-ai/enterprise-ai.module
 import { GeneratedResume } from './modules/enterprise-ai/entities/generated-resume.entity';
 import { CoverLetter } from './modules/enterprise-ai/entities/cover-letter.entity';
 import { JobDescription } from './modules/enterprise-ai/entities/job-description.entity';
-import { CareerPath } from './modules/enterprise-ai/entities/career-path.entity';
 import { NegotiationSession } from './modules/enterprise-ai/entities/negotiation-session.entity';
 import { InterviewSession } from './modules/enterprise-ai/entities/interview-session.entity';
 import { ResumeTemplate } from './modules/enterprise-ai/entities/resume-template.entity';

@@ -91,7 +91,7 @@ export const IntegrationDashboard: React.FC = () => {
       </Tabs>
 
       {loading ? (
-        <div className="text-center p-5">
+        <div className="p-5 text-center">
           <Spinner animation="border" />
         </div>
       ) : (

@@ -96,7 +96,7 @@ class MaintenanceService {
     return api.post('/api/v1/maintenance/technical-debt/identify');
   }
 
-  async getQualityMetrics(serviceName?: string, days?: number): Promise<any[]> {
+  async getQualityMetrics(serviceName?: string, days?: number): Promise<unknown[]> {
     const params = new URLSearchParams();
     if (serviceName) params.append('serviceName', serviceName);
     if (days) params.append('days', days.toString());
@@ -109,23 +109,23 @@ class MaintenanceService {
     return api.get(`/api/v1/maintenance/security-patches${params}`);
   }
 
-  async getSecurityDashboard(): Promise<any> {
+  async getSecurityDashboard(): Promise<unknown> {
     return api.get('/api/v1/maintenance/security-patches/dashboard');
   }
 
-  async scanVulnerabilities(): Promise<any> {
+  async scanVulnerabilities(): Promise<unknown> {
     return api.post('/api/v1/maintenance/security-patches/scan');
   }
 
-  async deployPatch(id: string): Promise<any> {
+  async deployPatch(id: string): Promise<unknown> {
     return api.post(`/api/v1/maintenance/security-patches/${id}/deploy`);
   }
 
-  async rollbackPatch(id: string): Promise<any> {
+  async rollbackPatch(id: string): Promise<unknown> {
     return api.post(`/api/v1/maintenance/security-patches/${id}/rollback`);
   }
 
-  async checkCompliance(): Promise<any> {
+  async checkCompliance(): Promise<unknown> {
     return api.get('/api/v1/maintenance/security-patches/compliance');
   }
 
@@ -138,23 +138,23 @@ class MaintenanceService {
     return api.get('/api/v1/maintenance/dependencies/outdated');
   }
 
-  async checkForUpdates(): Promise<any> {
+  async checkForUpdates(): Promise<unknown> {
     return api.post('/api/v1/maintenance/dependencies/check');
   }
 
-  async scanDependencies(): Promise<any> {
+  async scanDependencies(): Promise<unknown> {
     return api.post('/api/v1/maintenance/dependencies/scan');
   }
 
-  async applyUpdate(id: string): Promise<any> {
+  async applyUpdate(id: string): Promise<unknown> {
     return api.post(`/api/v1/maintenance/dependencies/${id}/update`);
   }
 
-  async rollbackUpdate(id: string): Promise<any> {
+  async rollbackUpdate(id: string): Promise<unknown> {
     return api.post(`/api/v1/maintenance/dependencies/${id}/rollback`);
   }
 
-  async getUpdateSchedule(): Promise<any> {
+  async getUpdateSchedule(): Promise<unknown> {
     return api.get('/api/v1/maintenance/dependencies/schedule');
   }
 
@@ -182,24 +182,24 @@ class MaintenanceService {
   }
 
   // Experiments
-  async getExperiments(status?: string): Promise<any[]> {
+  async getExperiments(status?: string): Promise<unknown[]> {
     const params = status ? `?status=${status}` : '';
     return api.get(`/api/v1/maintenance/experiments${params}`);
   }
 
-  async createExperiment(data: any): Promise<any> {
+  async createExperiment(data: unknown): Promise<unknown> {
     return api.post('/api/v1/maintenance/experiments', data);
   }
 
-  async startExperiment(id: string): Promise<any> {
+  async startExperiment(id: string): Promise<unknown> {
     return api.post(`/api/v1/maintenance/experiments/${id}/start`);
   }
 
-  async stopExperiment(id: string, results?: any): Promise<any> {
+  async stopExperiment(id: string, results?: unknown): Promise<unknown> {
     return api.post(`/api/v1/maintenance/experiments/${id}/stop`, results);
   }
 
-  async getExperimentResults(id: string): Promise<any> {
+  async getExperimentResults(id: string): Promise<unknown> {
     return api.get(`/api/v1/maintenance/experiments/${id}/results`);
   }
 
@@ -208,33 +208,33 @@ class MaintenanceService {
     return api.get(`/api/v1/maintenance/performance?serviceName=${serviceName}`);
   }
 
-  async getPerformanceSnapshots(serviceName: string, hours?: number): Promise<any[]> {
+  async getPerformanceSnapshots(serviceName: string, hours?: number): Promise<unknown[]> {
     const params = new URLSearchParams({ serviceName });
     if (hours) params.append('hours', hours.toString());
     return api.get(`/api/v1/maintenance/performance/snapshots?${params.toString()}`);
   }
 
-  async getApmData(serviceName: string): Promise<any> {
+  async getApmData(serviceName: string): Promise<unknown> {
     return api.get(`/api/v1/maintenance/performance/apm/${serviceName}`);
   }
 
-  async getDatabaseMetrics(): Promise<any> {
+  async getDatabaseMetrics(): Promise<unknown> {
     return api.get('/api/v1/maintenance/performance/database');
   }
 
-  async getSlowQueries(): Promise<any[]> {
+  async getSlowQueries(): Promise<unknown[]> {
     return api.get('/api/v1/maintenance/performance/slow-queries');
   }
 
-  async getCacheMetrics(serviceName: string): Promise<any> {
+  async getCacheMetrics(serviceName: string): Promise<unknown> {
     return api.get(`/api/v1/maintenance/performance/cache/${serviceName}`);
   }
 
-  async runLoadTest(config: any): Promise<any> {
+  async runLoadTest(config: unknown): Promise<unknown> {
     return api.post('/api/v1/maintenance/performance/load-test', config);
   }
 
-  async getLoadTestResults(serviceName?: string, limit?: number): Promise<any[]> {
+  async getLoadTestResults(serviceName?: string, limit?: number): Promise<unknown[]> {
     const params = new URLSearchParams();
     if (serviceName) params.append('serviceName', serviceName);
     if (limit) params.append('limit', limit.toString());
@@ -242,12 +242,12 @@ class MaintenanceService {
   }
 
   // Optimizations
-  async getOptimizationRecommendations(category?: string): Promise<any[]> {
+  async getOptimizationRecommendations(category?: string): Promise<unknown[]> {
     const params = category ? `?category=${category}` : '';
     return api.get(`/api/v1/maintenance/optimizations${params}`);
   }
 
-  async createOptimizationRecommendation(data: any): Promise<any> {
+  async createOptimizationRecommendation(data: unknown): Promise<unknown> {
     return api.post('/api/v1/maintenance/optimizations', data);
   }
 

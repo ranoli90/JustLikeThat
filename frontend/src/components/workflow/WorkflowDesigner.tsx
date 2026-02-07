@@ -259,7 +259,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           <Controls />
           <MiniMap
             nodeColor={(node) => {
-              const type = (node.data as WorkflowNodeData).type;
+              const {type} = (node.data as WorkflowNodeData);
               if (type.startsWith('trigger.')) return '#10B981';
               if (type.startsWith('action.')) return '#3B82F6';
               if (type.startsWith('condition.')) return '#F59E0B';

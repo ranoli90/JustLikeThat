@@ -132,17 +132,17 @@ export const ServiceMap: React.FC = () => {
   const selectedNode = services.find(s => s.id === selectedService);
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Service Map</h1>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="mb-6 text-2xl font-bold">Service Map</h1>
 
       <div className="flex gap-6">
         {/* Service Map Visualization */}
-        <div className="flex-1 bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Service Dependencies</h2>
+        <div className="flex-1 rounded-lg bg-white p-4 shadow">
+          <h2 className="mb-4 text-lg font-semibold">Service Dependencies</h2>
           {loading ? (
-            <div className="text-center py-4">Loading...</div>
+            <div className="py-4 text-center">Loading...</div>
           ) : (
-            <svg viewBox="0 0 800 600" className="w-full h-auto">
+            <svg viewBox="0 0 800 600" className="h-auto w-full">
               {/* Draw edges */}
               {edges.map((edge, index) => {
                 const sourceIndex = services.findIndex(s => s.id === edge.source);
@@ -214,34 +214,34 @@ export const ServiceMap: React.FC = () => {
           )}
 
           {/* Legend */}
-          <div className="flex justify-center gap-6 mt-4 text-sm">
+          <div className="mt-4 flex justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-green-500"></span>
+              <span className="size-4 rounded-full bg-green-500"></span>
               <span>Healthy</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-yellow-500"></span>
+              <span className="size-4 rounded-full bg-yellow-500"></span>
               <span>Warning</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-4 h-4 rounded-full bg-red-500"></span>
+              <span className="size-4 rounded-full bg-red-500"></span>
               <span>Critical</span>
             </div>
           </div>
         </div>
 
         {/* Service Details Panel */}
-        <div className="w-80 bg-white p-4 rounded-lg shadow">
+        <div className="w-80 rounded-lg bg-white p-4 shadow">
           {selectedNode ? (
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="mb-4 flex items-center gap-2">
                 <span className="text-2xl">{getServiceTypeIcon(selectedNode.type)}</span>
                 <h3 className="text-xl font-bold">{selectedNode.name}</h3>
               </div>
 
               <div className="mb-4">
                 <span
-                  className={`px-2 py-1 rounded text-sm ${
+                  className={`rounded px-2 py-1 text-sm ${
                     selectedNode.status === 'healthy'
                       ? 'bg-green-100 text-green-700'
                       : selectedNode.status === 'warning'
@@ -254,24 +254,24 @@ export const ServiceMap: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                <div className="p-3 bg-gray-50 rounded">
+                <div className="rounded bg-gray-50 p-3">
                   <div className="text-sm text-gray-500">Requests/second</div>
                   <div className="text-xl font-bold">
                     {selectedNode.metrics.requestsPerSecond.toLocaleString()}
                   </div>
                 </div>
 
-                <div className="p-3 bg-gray-50 rounded">
+                <div className="rounded bg-gray-50 p-3">
                   <div className="text-sm text-gray-500">Latency P50</div>
                   <div className="text-xl font-bold">{selectedNode.metrics.latencyP50}ms</div>
                 </div>
 
-                <div className="p-3 bg-gray-50 rounded">
+                <div className="rounded bg-gray-50 p-3">
                   <div className="text-sm text-gray-500">Latency P99</div>
                   <div className="text-xl font-bold">{selectedNode.metrics.latencyP99}ms</div>
                 </div>
 
-                <div className="p-3 bg-gray-50 rounded">
+                <div className="rounded bg-gray-50 p-3">
                   <div className="text-sm text-gray-500">Error Rate</div>
                   <div
                     className={`text-xl font-bold ${
@@ -284,7 +284,7 @@ export const ServiceMap: React.FC = () => {
               </div>
 
               <div className="mt-6">
-                <h4 className="font-semibold mb-2">Dependencies</h4>
+                <h4 className="mb-2 font-semibold">Dependencies</h4>
                 {edges
                   .filter(e => e.source === selectedNode.id || e.target === selectedNode.id)
                   .map((edge, index) => {
@@ -292,7 +292,7 @@ export const ServiceMap: React.FC = () => {
                       s => s.id === (edge.source === selectedNode.id ? edge.target : edge.source)
                     );
                     return (
-                      <div key={index} className="flex items-center justify-between py-2 border-b">
+                      <div key={index} className="flex items-center justify-between border-b py-2">
                         <span>{otherService?.name}</span>
                         <span className="text-sm text-gray-500">
                           {edge.requestsPerSecond}/s
@@ -303,7 +303,7 @@ export const ServiceMap: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center text-gray-500 py-8">
+            <div className="py-8 text-center text-gray-500">
               Select a service to view details
             </div>
           )}

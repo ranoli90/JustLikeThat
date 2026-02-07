@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SecurityService } from '../../services/security.service';
+import { ConfirmModal } from '../modals/ConfirmModal';
 
 interface ConsentPanelProps {
   userId?: string;
@@ -9,6 +10,7 @@ export const ConsentPanel: React.FC<ConsentPanelProps> = ({ userId }) => {
   const [consentData, setConsentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -61,12 +63,14 @@ export const ConsentPanel: React.FC<ConsentPanelProps> = ({ userId }) => {
   };
 
   const handleDeleteData = async () => {
-    if (!confirm('Are you sure you want to delete all your data? This action cannot be undone.')) {
-      return;
-    }
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteModal(false);
     try {
       await SecurityService.deleteUserData(userId!);
-      alert('Your data has been deleted');
+      console.log('Your data has been deleted');
     } catch (error) {
       console.error('Failed to delete data:', error);
     }
@@ -157,6 +161,14 @@ export const ConsentPanel: React.FC<ConsentPanelProps> = ({ userId }) => {
           ))}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete User Data"
+        message="Are you sure you want to delete all your data? This action cannot be undone."
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteModal(false)}
+      />
     </div>
   );
 };

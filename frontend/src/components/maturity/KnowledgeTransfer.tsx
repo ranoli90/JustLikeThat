@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { KnowledgeTransferAPI } from '../../services/maturity.service';
+import { ConfirmModal } from '../modals/ConfirmModal';
+import { PromptModal } from '../modals/PromptModal';
 
 interface KnowledgeTransfer {
   id: string;
@@ -20,6 +22,10 @@ export const KnowledgeTransferDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ type: '', status: '' });
   const [selectedItem, setSelectedItem] = useState<KnowledgeTransfer | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [scheduleItemId, setScheduleItemId] = useState<string | null>(null);
+  const [cancelItemId, setCancelItemId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -43,22 +49,28 @@ export const KnowledgeTransferDashboard: React.FC = () => {
   };
 
   const handleSchedule = async (id: string) => {
-    const date = prompt('Enter scheduled date (ISO format):');
-    if (date) {
+    setScheduleItemId(id);
+    setShowScheduleModal(true);
+  };
+
+  const confirmSchedule = async (date: string) => {
+    setShowScheduleModal(false);
+    if (date && scheduleItemId) {
       try {
-        await KnowledgeTransferAPI.schedule(id, { date: new Date(date).toISOString() });
-        alert('Knowledge transfer scheduled successfully!');
+        await KnowledgeTransferAPI.schedule(scheduleItemId, { date: new Date(date).toISOString() });
+        console.log('Knowledge transfer scheduled successfully!');
         loadData();
       } catch (error) {
         console.error('Failed to schedule knowledge transfer:', error);
       }
     }
+    setScheduleItemId(null);
   };
 
   const handleComplete = async (id: string) => {
     try {
       await KnowledgeTransferAPI.complete(id);
-      alert('Knowledge transfer marked as completed!');
+      console.log('Knowledge transfer marked as completed!');
       loadData();
     } catch (error) {
       console.error('Failed to complete knowledge transfer:', error);
@@ -66,15 +78,22 @@ export const KnowledgeTransferDashboard: React.FC = () => {
   };
 
   const handleCancel = async (id: string) => {
-    if (confirm('Are you sure you want to cancel this knowledge transfer?')) {
+    setCancelItemId(id);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    setShowCancelModal(false);
+    if (cancelItemId) {
       try {
-        await KnowledgeTransferAPI.cancel(id);
-        alert('Knowledge transfer cancelled!');
+        await KnowledgeTransferAPI.cancel(cancelItemId);
+        console.log('Knowledge transfer cancelled!');
         loadData();
       } catch (error) {
         console.error('Failed to cancel knowledge transfer:', error);
       }
     }
+    setCancelItemId(null);
   };
 
   const types = ['workshop', 'session', 'demo', 'handover', 'training', 'documentation'];
@@ -204,6 +223,29 @@ export const KnowledgeTransferDashboard: React.FC = () => {
           )}
         </div>
       )}
+
+      <PromptModal
+        isOpen={showScheduleModal}
+        title="Schedule Knowledge Transfer"
+        message="Enter scheduled date (ISO format):"
+        defaultValue=""
+        onConfirm={confirmSchedule}
+        onCancel={() => {
+          setShowScheduleModal(false);
+          setScheduleItemId(null);
+        }}
+      />
+
+      <ConfirmModal
+        isOpen={showCancelModal}
+        title="Cancel Knowledge Transfer"
+        message="Are you sure you want to cancel this knowledge transfer?"
+        onConfirm={confirmCancel}
+        onCancel={() => {
+          setShowCancelModal(false);
+          setCancelItemId(null);
+        }}
+      />
     </div>
   );
 };

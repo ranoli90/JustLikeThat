@@ -77,9 +77,12 @@ export function useOnboardingFeedback(
 
   const startStep = useCallback((stepId: string) => {
     setSteps((prev) =>
-      prev.map((step) =>
-        step.id === stepId ? { ...step, startedAt: Date.now() } : step,
-      ),
+      prev.map((step) => {
+        if (step.id === stepId) {
+          return { ...step, startedAt: Date.now() };
+        }
+        return step;
+      }),
     );
   }, []);
 

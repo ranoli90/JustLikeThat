@@ -103,7 +103,7 @@ export const GoalTracker: React.FC = () => {
       });
 
       const data = await response.json();
-      setGoals(goals.map(g => g.id === goalId ? data : g));
+      setGoals(goals.map(g => (g.id === goalId ? data : g)));
       fetchProgress();
     } catch (error) {
       console.error('Error updating milestone:', error);

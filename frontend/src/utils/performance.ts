@@ -3,18 +3,34 @@
  * Optimizations for client-side performance
  */
 
+// Extended interfaces for browser APIs
+interface NavigatorWithConnection extends Navigator {
+  connection?: {
+    effectiveType?: string;
+    downlink?: number;
+  };
+}
+
+interface PerformanceWithMemory extends Performance {
+  memory?: {
+    usedJSHeapSize: number;
+    totalJSHeapSize: number;
+    jsHeapSizeLimit: number;
+  };
+}
+
 // Memoization utility
-export function memoize<T extends (...args: any[]) => any>(
+export function memoize<T extends (...args: unknown[]) => unknown>(
   fn: T,
   maxSize: number = 100
 ): T {
   const cache = new Map<string, ReturnType<T>>();
   
-  return ((...args: Parameters<T>) => {
+  return ((...args: Parameters<T>): ReturnType<T> => {
     const key = JSON.stringify(args);
     
     if (cache.has(key)) {
-      return cache.get(key);
+      return cache.get(key) as ReturnType<T>;
     }
     
     const result = fn(...args);
@@ -26,11 +42,11 @@ export function memoize<T extends (...args: any[]) => any>(
     }
     
     return result;
-  }) as T;
+  });
 }
 
 // Debounce utility with leading/trailing options
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number,
   options: { leading?: boolean; trailing?: boolean } = {}
@@ -40,7 +56,7 @@ export function debounce<T extends (...args: any[]) => any>(
   
   const { leading = false, trailing = true } = options;
   
-  return ((...args: Parameters<T>) => {
+  return ((...args: Parameters<T>): ReturnType<T> => {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
@@ -69,17 +85,17 @@ export function debounce<T extends (...args: any[]) => any>(
         lastArgs = null;
       }, delay);
     }
-  }) as T;
+  });
 }
 
 // Throttle utility
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   fn: T,
   limit: number
 ): T {
   let inThrottle = false;
   
-  return ((...args: Parameters<T>) => {
+  return ((...args: Parameters<T>): ReturnType<T> => {
     if (!inThrottle) {
       fn(...args);
       inThrottle = true;
@@ -87,7 +103,7 @@ export function throttle<T extends (...args: any[]) => any>(
         inThrottle = false;
       }, limit);
     }
-  }) as T;
+  });
 }
 
 // Request idle callback polyfill
@@ -144,8 +160,8 @@ export function createLazyImageLoader(
   
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        const img = entry.target as HTMLImageElement;
+      if (entry.isIntersecting && entry.target instanceof HTMLImageElement) {
+        const img = entry.target;
         img.src = img.dataset.src || '';
         img.removeAttribute('data-src');
         img.classList.add('loaded');
@@ -192,7 +208,8 @@ export function preloadCriticalResources(resources: Array<{ href: string; type: 
       addResourceHint('preload', href, 'style');
     } else if (type === 'font') {
       addResourceHint('preload', href, 'font');
-      addResourceHint('preconnect', href.split('/')[0] + '//' + href.split('/')[2]);
+      const urlParts = href.split('/');
+      addResourceHint('preconnect', `${urlParts[0]}//${urlParts[2]}`);
     }
   });
 }
@@ -244,14 +261,15 @@ export function detectLongTasks(
 export function getNetworkQuality(): 'slow-2g' | '2g' | '3g' | '4g' | 'unknown' {
   if (typeof navigator === 'undefined') return 'unknown';
   
-  const connection = (navigator as any).connection;
+  const {connection} = navigator as NavigatorWithConnection;
   
   if (!connection) return 'unknown';
   
   const { effectiveType, downlink } = connection;
+  const linkSpeed = downlink ?? 0;
   
-  if (effectiveType === '4g' || downlink > 10) return '4g';
-  if (effectiveType === '3g' || downlink > 1) return '3g';
+  if (effectiveType === '4g' || linkSpeed > 10) return '4g';
+  if (effectiveType === '3g' || linkSpeed > 1) return '3g';
   if (effectiveType === '2g') return '2g';
   if (effectiveType === 'slow-2g') return 'slow-2g';
   
@@ -260,9 +278,10 @@ export function getNetworkQuality(): 'slow-2g' | '2g' | '3g' | '4g' | 'unknown' 
 
 // Memory usage monitoring
 export function getMemoryUsage(): { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } | null {
-  if (typeof window === 'undefined' || !(performance as any).memory) return null;
+  if (typeof window === 'undefined' || !(performance as PerformanceWithMemory).memory) return null;
   
-  const memory = (performance as any).memory;
+  const {memory} = performance as PerformanceWithMemory;
+  if (!memory) return null;
   return {
     usedJSHeapSize: memory.usedJSHeapSize,
     totalJSHeapSize: memory.totalJSHeapSize,
@@ -281,7 +300,8 @@ export function measureWebVitals(
     try {
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1];
+        const lastEntry = entries.at(-1);
+        if (!lastEntry) return;
         onReport({
           name: 'LCP',
           value: lastEntry.startTime + lastEntry.duration,
@@ -297,7 +317,7 @@ export function measureWebVitals(
     // FID
     try {
       const fidObserver = new PerformanceObserver((list) => {
-        const firstInput = list.getEntries()[0];
+        const firstInput = list.getEntries().at(0);
         if (firstInput) {
           onReport({
             name: 'FID',
@@ -314,12 +334,13 @@ export function measureWebVitals(
     
     // CLS
     let clsValue = 0;
-    let clsEntries: PerformanceEntry[] = [];
+    const clsEntries: PerformanceEntry[] = [];
     try {
       const clsObserver = new PerformanceObserver((list) => {
         list.getEntries().forEach((entry) => {
-          if (!(entry as any).hadRecentInput) {
-            clsValue += (entry as any).value;
+          const layoutShift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
+          if (!layoutShift.hadRecentInput) {
+            clsValue += layoutShift.value || 0;
             clsEntries.push(entry);
           }
         });
@@ -348,7 +369,7 @@ export function monitorBundleSize(): void {
     .reduce(
       (acc, r) => {
         const type = r.name.includes('.js') ? 'scripts' : 'styles';
-        acc[type].count++;
+        acc[type].count += 1;
         acc[type].size += r.transferSize || r.decodedBodySize || 0;
         return acc;
       },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SecurityService } from '../../services/security.service';
+import { ConfirmModal } from '../modals/ConfirmModal';
 
 interface MfaPanelProps {
   userId?: string;
@@ -13,6 +14,7 @@ export const MfaPanel: React.FC<MfaPanelProps> = ({ userId }) => {
   const [verifying, setVerifying] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [selectedMethod, setSelectedMethod] = useState<'totp' | 'sms' | 'email' | 'webauthn'>('totp');
+  const [showDisableModal, setShowDisableModal] = useState(false);
 
   useEffect(() => {
     if (userId) {
@@ -61,7 +63,7 @@ export const MfaPanel: React.FC<MfaPanelProps> = ({ userId }) => {
         setVerificationCode('');
         await loadMfaStatus();
       } else {
-        alert(result.message || 'Verification failed');
+        console.error(result.message || 'Verification failed');
       }
     } catch (error) {
       console.error('Failed to verify MFA:', error);
@@ -71,9 +73,11 @@ export const MfaPanel: React.FC<MfaPanelProps> = ({ userId }) => {
   };
 
   const handleDisable = async () => {
-    if (!confirm('Are you sure you want to disable MFA? This will reduce your account security.')) {
-      return;
-    }
+    setShowDisableModal(true);
+  };
+
+  const confirmDisable = async () => {
+    setShowDisableModal(false);
     try {
       await SecurityService.disableMfa(userId!);
       await loadMfaStatus();
@@ -222,6 +226,14 @@ export const MfaPanel: React.FC<MfaPanelProps> = ({ userId }) => {
           </button>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={showDisableModal}
+        title="Disable MFA"
+        message="Are you sure you want to disable MFA? This will reduce your account security."
+        onConfirm={confirmDisable}
+        onCancel={() => setShowDisableModal(false)}
+      />
     </div>
   );
 };

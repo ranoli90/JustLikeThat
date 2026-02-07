@@ -86,7 +86,7 @@ class UserAPIService {
   }
 
   async updateProfile(data: UpdateUserData): Promise<User> {
-    const response = await api.put<User>('/user/profile', data as unknown as Record<string, unknown>);
+    const response = await api.put<User>('/user/profile', data);
     return response;
   }
 
@@ -96,7 +96,7 @@ class UserAPIService {
   }
 
   async updatePreferences(data: UpdatePreferencesData): Promise<UserPreferences> {
-    const response = await api.put<UserPreferences>('/user/preferences', data as unknown as Record<string, unknown>);
+    const response = await api.put<UserPreferences>('/user/preferences', data);
     return response;
   }
 
@@ -105,7 +105,7 @@ class UserAPIService {
   }
 
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await api.put('/user/password', { currentPassword, newPassword } as unknown as Record<string, unknown>);
+    await api.put('/user/password', { currentPassword, newPassword });
   }
 }
 
@@ -116,14 +116,14 @@ class ProfileAPIService {
   }
 
   async updateCandidateProfile(data: UpdateProfileData): Promise<CandidateProfile> {
-    const response = await api.put<CandidateProfile>('/profiles/me', data as unknown as Record<string, unknown>);
+    const response = await api.put<CandidateProfile>('/profiles/me', data);
     return response;
   }
 
   async uploadResume(file: File): Promise<{ url: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post<{ url: string }>('/profiles/resumes', formData as unknown as Record<string, unknown>, { headers: { 'Content-Type': 'multipart/form-data' } });
+    const response = await api.post<{ url: string }>('/profiles/resumes', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
     return response;
   }
 

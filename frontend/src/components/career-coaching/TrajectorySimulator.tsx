@@ -216,9 +216,9 @@ export const TrajectorySimulator: React.FC = () => {
                 className={`scenario-card ${selectedScenarios.includes(scenario.id) ? 'selected' : ''}`}
                 onClick={() => {
                   setSelectedScenarios(prev =>
-                    prev.includes(scenario.id)
+                    (prev.includes(scenario.id)
                       ? prev.filter(id => id !== scenario.id)
-                      : [...prev, scenario.id]
+                      : [...prev, scenario.id])
                   );
                 }}
               >

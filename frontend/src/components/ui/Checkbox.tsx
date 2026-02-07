@@ -15,7 +15,7 @@ export const Checkbox = ({
     <div className="flex items-center">
       <input
         type="checkbox"
-        className={`w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300 ${className}`}
+        className={`size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${className}`}
         {...props}
       />
       {label && (

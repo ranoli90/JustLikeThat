@@ -96,8 +96,20 @@ export function useFeatureFlag(featureKey: string) {
   return { isEnabled, loading, error };
 }
 
+interface Branding {
+  logo?: string;
+  colors?: {
+    primary?: string;
+    secondary?: string;
+  };
+  fonts?: {
+    heading?: string;
+    body?: string;
+  };
+}
+
 export function useBranding() {
-  const [branding, setBranding] = useState<any>(null);
+  const [branding, setBranding] = useState<Branding | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

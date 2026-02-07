@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ConfirmModal } from '../modals/ConfirmModal';
 
 interface ScheduledWorkflow {
   id: string;
@@ -31,6 +32,8 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({
     timezone: 'UTC',
     priority: 5,
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteScheduleId, setDeleteScheduleId] = useState<string | null>(null);
 
   useState(() => {
     fetchSchedules();
@@ -69,7 +72,7 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({
         },
       ];
 
-      let filtered = mockSchedules;
+      const filtered = mockSchedules;
       if (workflowId) {
         filtered = filtered.filter(s => s.workflowId === workflowId);
       }
@@ -107,13 +110,21 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({
   const handleToggleStatus = async (scheduleId: string, newStatus: ScheduledWorkflow['status']) => {
     // API call to update status
     setSchedules(schedules.map(s => 
-      s.id === scheduleId ? { ...s, status: newStatus } : s
+      (s.id === scheduleId ? { ...s, status: newStatus } : s)
     ));
   };
 
   const handleDelete = async (scheduleId: string) => {
-    if (!confirm('Are you sure you want to delete this schedule?')) return;
-    setSchedules(schedules.filter(s => s.id !== scheduleId));
+    setDeleteScheduleId(scheduleId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    setShowDeleteModal(false);
+    if (deleteScheduleId) {
+      setSchedules(schedules.filter(s => s.id !== deleteScheduleId));
+    }
+    setDeleteScheduleId(null);
   };
 
   const cronPresets = [
@@ -402,6 +413,16 @@ const ScheduleManager: React.FC<ScheduleManagerProps> = ({
           </div>
         </div>
       )}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Schedule"
+        message="Are you sure you want to delete this schedule?"
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setShowDeleteModal(false);
+          setDeleteScheduleId(null);
+        }}
+      />
     </div>
   );
 };

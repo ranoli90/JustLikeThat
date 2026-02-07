@@ -84,13 +84,13 @@ export const PlanManager: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Plans & Pricing</h1>
+        <h1 className="mb-2 text-2xl font-bold">Plans & Pricing</h1>
         <p className="text-gray-500">Choose the plan that best fits your needs</p>
       </div>
 
       {/* Current Plan */}
-      <Card className="p-4 mb-6 bg-blue-50 border-blue-200">
-        <div className="flex justify-between items-center">
+      <Card className="mb-6 border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-center justify-between">
           <div>
             <h3 className="font-semibold text-blue-800">Current Plan</h3>
             <p className="text-2xl font-bold">{tenant.plan}</p>
@@ -100,7 +100,7 @@ export const PlanManager: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
       </Card>
 
       {/* Plan Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {['FREE', 'STARTER', 'PROFESSIONAL', 'ENTERPRISE'].map(tier => {
           const plan = plans.find(p => p.tier === tier) || {
             tier,
@@ -116,20 +116,20 @@ export const PlanManager: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
           return (
             <Card 
               key={tier} 
-              className={`p-4 relative ${isCurrent ? 'border-blue-500 border-2' : ''}`}
+              className={`relative p-4 ${isCurrent ? 'border-2 border-blue-500' : ''}`}
             >
               {isCurrent && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-xs px-3 py-1 rounded-full">
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-500 px-3 py-1 text-xs text-white">
                   Current Plan
                 </span>
               )}
               
-              <h3 className="font-semibold text-lg">{plan.name}</h3>
+              <h3 className="text-lg font-semibold">{plan.name}</h3>
               <div className="mt-2">
                 <span className="text-3xl font-bold">
                   ${plan.basePrice}
                 </span>
-                <span className="text-gray-500 text-sm">/{plan.billingCycle.toLowerCase()}</span>
+                <span className="text-sm text-gray-500">/{plan.billingCycle.toLowerCase()}</span>
               </div>
 
               <ul className="mt-4 space-y-2 text-sm">
@@ -142,7 +142,7 @@ export const PlanManager: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
               </ul>
 
               <Button
-                className="w-full mt-4"
+                className="mt-4 w-full"
                 variant={isCurrent ? 'outline' : 'primary'}
                 disabled={isCurrent}
                 onClick={() => handleUpgrade(tier)}
@@ -156,26 +156,26 @@ export const PlanManager: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
 
       {/* Feature Comparison Table */}
       <Card className="p-4">
-        <h3 className="font-semibold mb-4">Feature Comparison</h3>
+        <h3 className="mb-4 font-semibold">Feature Comparison</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-2 px-4">Feature</th>
-                <th className="text-center py-2 px-4">Free</th>
-                <th className="text-center py-2 px-4">Starter</th>
-                <th className="text-center py-2 px-4">Professional</th>
-                <th className="text-center py-2 px-4">Enterprise</th>
+                <th className="px-4 py-2 text-left">Feature</th>
+                <th className="px-4 py-2 text-center">Free</th>
+                <th className="px-4 py-2 text-center">Starter</th>
+                <th className="px-4 py-2 text-center">Professional</th>
+                <th className="px-4 py-2 text-center">Enterprise</th>
               </tr>
             </thead>
             <tbody>
               {PLAN_COMPARISON.map((row, i) => (
                 <tr key={i} className="border-b last:border-0">
-                  <td className="py-2 px-4 font-medium">{row.name}</td>
-                  <td className="text-center py-2 px-4">{row.free}</td>
-                  <td className="text-center py-2 px-4">{row.starter}</td>
-                  <td className="text-center py-2 px-4">{row.professional}</td>
-                  <td className="text-center py-2 px-4">{row.enterprise}</td>
+                  <td className="px-4 py-2 font-medium">{row.name}</td>
+                  <td className="px-4 py-2 text-center">{row.free}</td>
+                  <td className="px-4 py-2 text-center">{row.starter}</td>
+                  <td className="px-4 py-2 text-center">{row.professional}</td>
+                  <td className="px-4 py-2 text-center">{row.enterprise}</td>
                 </tr>
               ))}
             </tbody>
@@ -185,10 +185,10 @@ export const PlanManager: React.FC<{ tenant: Tenant }> = ({ tenant }) => {
 
       {/* Upgrade Modal */}
       {showUpgradeModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold mb-2">Confirm Plan Change</h3>
-            <p className="text-gray-500 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="mx-4 w-full max-w-md p-6">
+            <h3 className="mb-2 text-xl font-bold">Confirm Plan Change</h3>
+            <p className="mb-4 text-gray-500">
               Are you sure you want to upgrade to the {selectedPlan} plan?
             </p>
             <div className="flex gap-4">

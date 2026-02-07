@@ -48,7 +48,7 @@ export const CoverLetterEditor: React.FC<CoverLetterEditorProps> = ({ userId, jo
       <div className="input-section">
         <input value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} placeholder="Company Name" />
         <input value={formData.jobTitle} onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })} placeholder="Job Title" />
-        <select value={formData.tone} onChange={(e) => setFormData({ ...formData, tone: e.target.value as any })}>
+        <select value={formData.tone} onChange={(e) => setFormData({ ...formData, tone: e.target.value as typeof formData['tone'] })}>
           <option value="formal">Formal</option>
           <option value="professional">Professional</option>
           <option value="casual">Casual</option>

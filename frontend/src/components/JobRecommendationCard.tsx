@@ -52,17 +52,17 @@ export function JobRecommendationCard({
   };
 
   return (
-    <div className={`border rounded-lg p-4 transition-shadow hover:shadow-md ${getScoreBg(score)}`}>
-      <div className="flex justify-between items-start">
+    <div className={`rounded-lg border p-4 transition-shadow hover:shadow-md ${getScoreBg(score)}`}>
+      <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold text-gray-900">{jobPosting.title}</h3>
-            <span className={`px-2 py-0.5 rounded text-sm font-medium ${getScoreBg(score)} ${getScoreColor(score)}`}>
+            <span className={`rounded px-2 py-0.5 text-sm font-medium ${getScoreBg(score)} ${getScoreColor(score)}`}>
               {score}% Match
             </span>
           </div>
-          <p className="text-gray-700 mt-1">{jobPosting.company}</p>
-          <div className="flex flex-wrap gap-3 mt-2 text-sm text-gray-600">
+          <p className="mt-1 text-gray-700">{jobPosting.company}</p>
+          <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-600">
             <span>📍 {jobPosting.location}</span>
             <span>🏠 {jobPosting.remotePreference}</span>
             <span>💼 {jobPosting.jobType}</span>
@@ -76,7 +76,7 @@ export function JobRecommendationCard({
           <div className="flex gap-2">
             <button
               onClick={handleSave}
-              className={`px-3 py-1 rounded text-sm ${
+              className={`rounded px-3 py-1 text-sm ${
                 saved
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -86,7 +86,7 @@ export function JobRecommendationCard({
             </button>
             <button
               onClick={() => onApply?.(jobPosting.id)}
-              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+              className="rounded bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700"
             >
               Apply
             </button>
@@ -97,7 +97,7 @@ export function JobRecommendationCard({
       {whyRecommended.length > 0 && (
         <div className="mt-3">
           <p className="text-sm font-medium text-gray-700">Why recommended:</p>
-          <ul className="text-sm text-gray-600 list-disc list-inside">
+          <ul className="list-inside list-disc text-sm text-gray-600">
             {whyRecommended.slice(0, 3).map((reason, index) => (
               <li key={index}>{reason}</li>
             ))}
@@ -106,9 +106,9 @@ export function JobRecommendationCard({
       )}
 
       {potentialConcerns.length > 0 && expanded && (
-        <div className="mt-3 p-2 bg-yellow-50 rounded">
+        <div className="mt-3 rounded bg-yellow-50 p-2">
           <p className="text-sm font-medium text-yellow-800">Considerations:</p>
-          <ul className="text-sm text-yellow-700 list-disc list-inside">
+          <ul className="list-inside list-disc text-sm text-yellow-700">
             {potentialConcerns.map((concern, index) => (
               <li key={index}>{concern}</li>
             ))}
@@ -117,9 +117,9 @@ export function JobRecommendationCard({
       )}
 
       {expanded && matchResult.explanations.length > 0 && (
-        <div className="mt-3 p-3 bg-gray-50 rounded">
+        <div className="mt-3 rounded bg-gray-50 p-3">
           <p className="text-sm font-medium text-gray-700">Match Details:</p>
-          <ul className="text-sm text-gray-600 list-disc list-inside">
+          <ul className="list-inside list-disc text-sm text-gray-600">
             {matchResult.explanations.map((exp, index) => (
               <li key={index}>{exp}</li>
             ))}
@@ -127,7 +127,7 @@ export function JobRecommendationCard({
         </div>
       )}
 
-      <div className="flex justify-between items-center mt-4 pt-3 border-t">
+      <div className="mt-4 flex items-center justify-between border-t pt-3">
         <button
           onClick={() => setExpanded(!expanded)}
           className="text-sm text-blue-600 hover:text-blue-700"
@@ -175,13 +175,13 @@ export function JobRecommendationsList({
   if (loading) {
     return (
       <div className="p-4">
-        <h2 className="text-xl font-semibold mb-4">{title}</h2>
+        <h2 className="mb-4 text-xl font-semibold">{title}</h2>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="border rounded-lg p-4 animate-pulse">
-              <div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/4 mb-3"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            <div key={i} className="animate-pulse rounded-lg border p-4">
+              <div className="mb-2 h-6 w-1/3 rounded bg-gray-200"></div>
+              <div className="mb-3 h-4 w-1/4 rounded bg-gray-200"></div>
+              <div className="h-4 w-1/2 rounded bg-gray-200"></div>
             </div>
           ))}
         </div>
@@ -192,10 +192,10 @@ export function JobRecommendationsList({
   if (recommendations.length === 0) {
     return (
       <div className="p-4">
-        <h2 className="text-xl font-semibold mb-4">{title}</h2>
-        <div className="text-center py-8 text-gray-500">
+        <h2 className="mb-4 text-xl font-semibold">{title}</h2>
+        <div className="py-8 text-center text-gray-500">
           <p>No recommendations available at this time.</p>
-          <p className="text-sm mt-2">Try updating your preferences or job search criteria.</p>
+          <p className="mt-2 text-sm">Try updating your preferences or job search criteria.</p>
         </div>
       </div>
     );
@@ -203,7 +203,7 @@ export function JobRecommendationsList({
 
   return (
     <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">{title}</h2>
         <span className="text-sm text-gray-500">{recommendations.length} jobs found</span>
       </div>

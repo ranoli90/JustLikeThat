@@ -58,9 +58,9 @@ const NodePalette: React.FC<NodePaletteProps> = ({ onDragStart }) => {
 
   const toggleCategory = (category: string) => {
     setExpandedCategories((prev) =>
-      prev.includes(category)
+      (prev.includes(category)
         ? prev.filter((c) => c !== category)
-        : [...prev, category]
+        : [...prev, category])
     );
   };
 

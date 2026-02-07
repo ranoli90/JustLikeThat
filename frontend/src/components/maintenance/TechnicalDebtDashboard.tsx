@@ -218,7 +218,7 @@ export const TechnicalDebtDashboard: React.FC = () => {
                           padding: '2px 8px', 
                           borderRadius: '12px', 
                           fontSize: '12px',
-                          background: getSeverityColor(item.severity) + '20',
+                          background: `${getSeverityColor(item.severity)  }20`,
                           color: getSeverityColor(item.severity)
                         }}>
                           {item.severity}
@@ -227,7 +227,7 @@ export const TechnicalDebtDashboard: React.FC = () => {
                           padding: '2px 8px', 
                           borderRadius: '12px', 
                           fontSize: '12px',
-                          background: getStatusColor(item.status) + '20',
+                          background: `${getStatusColor(item.status)  }20`,
                           color: getStatusColor(item.status)
                         }}>
                           {item.status.replace('_', ' ')}

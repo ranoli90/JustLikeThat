@@ -75,7 +75,7 @@ export const OutreachDashboard: React.FC = () => {
 
   return (
     <div className="outreach-dashboard">
-      <div className="header flex justify-between items-center mb-6">
+      <div className="header mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Employer Outreach & Networking</h1>
         <div className="actions">
           <button
@@ -96,15 +96,15 @@ export const OutreachDashboard: React.FC = () => {
       {/* Tabs */}
       <div className="tabs mb-6">
         <nav className="flex space-x-4">
-          {['overview', 'campaigns', 'templates', 'recruiters', 'analytics'].map((tab) => (
+          {(['overview', 'campaigns', 'templates', 'recruiters', 'analytics'] as const).map((tab) => (
             <button
               key={tab}
-              className={`px-4 py-2 rounded ${
+              className={`rounded-md px-4 py-2 font-medium ${
                 activeTab === tab
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 text-gray-700'
               }`}
-              onClick={() => setActiveTab(tab as any)}
+              onClick={() => setActiveTab(tab)}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
@@ -114,21 +114,21 @@ export const OutreachDashboard: React.FC = () => {
 
       {/* Overview Tab */}
       {activeTab === 'overview' && analytics && (
-        <div className="overview-grid grid grid-cols-4 gap-4 mb-6">
-          <div className="stat-card bg-white p-4 rounded shadow">
-            <h3 className="text-gray-500 text-sm">Active Campaigns</h3>
+        <div className="overview-grid mb-6 grid grid-cols-4 gap-4">
+          <div className="stat-card rounded bg-white p-4 shadow">
+            <h3 className="text-sm text-gray-500">Active Campaigns</h3>
             <p className="text-3xl font-bold">{analytics.campaigns.active}</p>
           </div>
-          <div className="stat-card bg-white p-4 rounded shadow">
-            <h3 className="text-gray-500 text-sm">Total Sent</h3>
+          <div className="stat-card rounded bg-white p-4 shadow">
+            <h3 className="text-sm text-gray-500">Total Sent</h3>
             <p className="text-3xl font-bold">{analytics.performance.totalSent}</p>
           </div>
-          <div className="stat-card bg-white p-4 rounded shadow">
-            <h3 className="text-gray-500 text-sm">Response Rate</h3>
+          <div className="stat-card rounded bg-white p-4 shadow">
+            <h3 className="text-sm text-gray-500">Response Rate</h3>
             <p className="text-3xl font-bold">{analytics.performance.responseRate}%</p>
           </div>
-          <div className="stat-card bg-white p-4 rounded shadow">
-            <h3 className="text-gray-500 text-sm">Connections Made</h3>
+          <div className="stat-card rounded bg-white p-4 shadow">
+            <h3 className="text-sm text-gray-500">Connections Made</h3>
             <p className="text-3xl font-bold">{analytics.performance.totalConnections}</p>
           </div>
         </div>
@@ -137,7 +137,7 @@ export const OutreachDashboard: React.FC = () => {
       {/* Campaigns Tab */}
       {activeTab === 'campaigns' && (
         <div className="campaigns-list">
-          <table className="w-full bg-white rounded shadow">
+          <table className="w-full rounded bg-white shadow">
             <thead>
               <tr className="bg-gray-100">
                 <th className="p-4 text-left">Campaign</th>
@@ -156,7 +156,7 @@ export const OutreachDashboard: React.FC = () => {
                   <td className="p-4">{campaign.type}</td>
                   <td className="p-4">
                     <span
-                      className={`px-2 py-1 rounded text-sm ${
+                      className={`rounded px-2 py-1 text-sm ${
                         campaign.status === 'active'
                           ? 'bg-green-100 text-green-800'
                           : 'bg-gray-100 text-gray-800'
@@ -169,7 +169,7 @@ export const OutreachDashboard: React.FC = () => {
                   <td className="p-4">{campaign.responseCount}</td>
                   <td className="p-4">{campaign.responseRate}%</td>
                   <td className="p-4">
-                    <button className="text-blue-600 hover:underline mr-2">Edit</button>
+                    <button className="mr-2 text-blue-600 hover:underline">Edit</button>
                     <button className="text-green-600 hover:underline">Launch</button>
                   </td>
                 </tr>
@@ -183,17 +183,17 @@ export const OutreachDashboard: React.FC = () => {
       {activeTab === 'templates' && (
         <div className="templates-grid grid grid-cols-3 gap-4">
           {templates.map((template) => (
-            <div key={template.id} className="template-card bg-white p-4 rounded shadow">
-              <h3 className="font-bold mb-2">{template.name}</h3>
-              <p className="text-gray-500 text-sm mb-2">{template.category}</p>
+            <div key={template.id} className="template-card rounded bg-white p-4 shadow">
+              <h3 className="mb-2 font-bold">{template.name}</h3>
+              <p className="mb-2 text-sm text-gray-500">{template.category}</p>
               <div className="flex justify-between text-sm">
                 <span>Used: {template.usageCount}</span>
                 <span>Success: {template.successRate}%</span>
               </div>
-              <button className="mt-2 w-full btn btn-secondary text-sm">Edit Template</button>
+              <button className="btn btn-secondary mt-2 w-full text-sm">Edit Template</button>
             </div>
           ))}
-          <div className="template-card bg-gray-50 p-4 rounded shadow border-2 border-dashed border-gray-300 flex items-center justify-center">
+          <div className="template-card flex items-center justify-center rounded border-2 border-dashed border-gray-300 bg-gray-50 p-4 shadow">
             <button className="text-gray-500">+ Create Template</button>
           </div>
         </div>
@@ -249,7 +249,7 @@ const RecruiterRelationshipManager: React.FC = () => {
 
   return (
     <div>
-      <div className="flex justify-between mb-4">
+      <div className="mb-4 flex justify-between">
         <h2 className="text-xl font-bold">Recruiter Relationships</h2>
         <button
           className="btn btn-primary"
@@ -260,37 +260,37 @@ const RecruiterRelationshipManager: React.FC = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
+        <form onSubmit={handleSubmit} className="mb-4 rounded bg-white p-4 shadow">
           <div className="grid grid-cols-2 gap-4">
             <input
               type="text"
               placeholder="Recruiter Name"
-              className="border p-2 rounded"
+              className="rounded border p-2"
               value={formData.recruiterName}
               onChange={(e) => setFormData({ ...formData, recruiterName: e.target.value })}
             />
             <input
               type="email"
               placeholder="Email"
-              className="border p-2 rounded"
+              className="rounded border p-2"
               value={formData.recruiterEmail}
               onChange={(e) => setFormData({ ...formData, recruiterEmail: e.target.value })}
             />
             <input
               type="text"
               placeholder="Company"
-              className="border p-2 rounded"
+              className="rounded border p-2"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
             />
           </div>
-          <button type="submit" className="mt-4 btn btn-primary">Save Recruiter</button>
+          <button type="submit" className="btn btn-primary mt-4">Save Recruiter</button>
         </form>
       )}
 
       <div className="grid gap-4">
         {recruiters.map((recruiter) => (
-          <div key={recruiter.id} className="bg-white p-4 rounded shadow">
+          <div key={recruiter.id} className="rounded bg-white p-4 shadow">
             <div className="flex justify-between">
               <div>
                 <h3 className="font-bold">{recruiter.recruiterName}</h3>
@@ -333,18 +333,18 @@ const OutreachAnalyticsView: React.FC = () => {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Outreach Performance Analytics</h2>
+      <h2 className="mb-4 text-xl font-bold">Outreach Performance Analytics</h2>
       {metrics && (
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded shadow">
-            <h3 className="font-bold mb-2">Engagement Metrics</h3>
+          <div className="rounded bg-white p-4 shadow">
+            <h3 className="mb-2 font-bold">Engagement Metrics</h3>
             <p>Total Messages: {metrics.engagement?.summary?.totalMessages}</p>
             <p>Open Rate: {metrics.engagement?.summary?.openRate}%</p>
             <p>Click Rate: {metrics.engagement?.summary?.clickRate}%</p>
             <p>Reply Rate: {metrics.engagement?.summary?.replyRate}%</p>
           </div>
-          <div className="bg-white p-4 rounded shadow">
-            <h3 className="font-bold mb-2">Response Rates</h3>
+          <div className="rounded bg-white p-4 shadow">
+            <h3 className="mb-2 font-bold">Response Rates</h3>
             <p>Total Contacted: {metrics.responseRates?.overall?.totalContacted}</p>
             <p>Total Responded: {metrics.responseRates?.overall?.totalResponded}</p>
             <p>Avg Response Time: {metrics.responseRates?.overall?.avgFirstResponseTimeHours} hours</p>

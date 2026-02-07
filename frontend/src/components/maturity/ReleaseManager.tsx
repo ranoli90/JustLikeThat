@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ReleaseAPI } from '../../services/maturity.service';
+import { PromptModal } from '../modals/PromptModal';
 
 interface Release {
   id: string;
@@ -18,6 +19,8 @@ export const ReleaseManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '', riskLevel: '' });
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
+  const [showRollbackModal, setShowRollbackModal] = useState(false);
+  const [rollbackItemId, setRollbackItemId] = useState<string | null>(null);
 
   useEffect(() => {
     loadReleases();
@@ -41,7 +44,7 @@ export const ReleaseManager: React.FC = () => {
   const handleApprove = async (id: string) => {
     try {
       await ReleaseAPI.approve(id, { approverRole: 'admin', approverId: 'current-user' });
-      alert('Release approved successfully!');
+      console.log('Release approved successfully!');
       loadReleases();
     } catch (error) {
       console.error('Failed to approve release:', error);
@@ -51,7 +54,7 @@ export const ReleaseManager: React.FC = () => {
   const handleDeploy = async (id: string, environment: string) => {
     try {
       await ReleaseAPI.deploy(id, { environment, deployedBy: 'current-user' });
-      alert(`Deployment to ${environment} started!`);
+      console.log(`Deployment to ${environment} started!`);
       loadReleases();
     } catch (error) {
       console.error('Failed to deploy release:', error);
@@ -59,16 +62,22 @@ export const ReleaseManager: React.FC = () => {
   };
 
   const handleRollback = async (id: string) => {
-    const reason = prompt('Enter rollback reason:');
-    if (reason) {
+    setRollbackItemId(id);
+    setShowRollbackModal(true);
+  };
+
+  const confirmRollback = async (reason: string) => {
+    setShowRollbackModal(false);
+    if (reason && rollbackItemId) {
       try {
-        await ReleaseAPI.rollback(id, { reason, rolledBackBy: 'current-user' });
-        alert('Rollback initiated successfully!');
+        await ReleaseAPI.rollback(rollbackItemId, { reason, rolledBackBy: 'current-user' });
+        console.log('Rollback initiated successfully!');
         loadReleases();
       } catch (error) {
         console.error('Failed to rollback release:', error);
       }
     }
+    setRollbackItemId(null);
   };
 
   const statuses = ['planning', 'scheduled', 'in_progress', 'released', 'cancelled', 'rolled_back'];
@@ -179,6 +188,18 @@ export const ReleaseManager: React.FC = () => {
           </div>
         </div>
       )}
+
+      <PromptModal
+        isOpen={showRollbackModal}
+        title="Rollback Release"
+        message="Enter rollback reason:"
+        defaultValue=""
+        onConfirm={confirmRollback}
+        onCancel={() => {
+          setShowRollbackModal(false);
+          setRollbackItemId(null);
+        }}
+      />
     </div>
   );
 };

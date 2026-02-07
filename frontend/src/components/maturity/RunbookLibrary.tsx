@@ -41,7 +41,7 @@ export const RunbookLibrary: React.FC = () => {
   const executeRunbook = async (id: string) => {
     try {
       await RunbookAPI.execute(id, { executedBy: 'current-user', notes: 'Manual execution' });
-      alert('Runbook executed successfully!');
+      console.log('Runbook executed successfully!');
     } catch (error) {
       console.error('Failed to execute runbook:', error);
     }

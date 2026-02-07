@@ -139,7 +139,7 @@ export const InnovationSandbox: React.FC = () => {
                     <p style={{ fontStyle: 'italic', color: '#6b7280', fontSize: '13px', margin: 0 }}>Hypothesis: {exp.hypothesis}</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: getStatusColor(exp.status) + '20', color: getStatusColor(exp.status) }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: `${getStatusColor(exp.status)  }20`, color: getStatusColor(exp.status) }}>
                       {exp.status}
                     </span>
                     {exp.status === 'draft' && (

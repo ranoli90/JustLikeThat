@@ -42,7 +42,7 @@ export const APIGatewayConfig: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rateLimit }),
       });
-      alert('Rate limits saved successfully!');
+      console.log('Rate limits saved successfully!');
     } catch (error) {
       console.error('Failed to save rate limits:', error);
     } finally {
@@ -87,7 +87,7 @@ export const APIGatewayConfig: React.FC = () => {
             <input
               type="number"
               value={rateLimit.requestsPerMinute}
-              onChange={e => setRateLimit({ ...rateLimit, requestsPerMinute: parseInt(e.target.value) })}
+              onChange={e => setRateLimit({ ...rateLimit, requestsPerMinute: parseInt(e.target.value, 10) })}
             />
           </div>
           <div className="form-group">
@@ -95,7 +95,7 @@ export const APIGatewayConfig: React.FC = () => {
             <input
               type="number"
               value={rateLimit.requestsPerHour}
-              onChange={e => setRateLimit({ ...rateLimit, requestsPerHour: parseInt(e.target.value) })}
+              onChange={e => setRateLimit({ ...rateLimit, requestsPerHour: parseInt(e.target.value, 10) })}
             />
           </div>
           <div className="form-group">
@@ -103,7 +103,7 @@ export const APIGatewayConfig: React.FC = () => {
             <input
               type="number"
               value={rateLimit.requestsPerDay}
-              onChange={e => setRateLimit({ ...rateLimit, requestsPerDay: parseInt(e.target.value) })}
+              onChange={e => setRateLimit({ ...rateLimit, requestsPerDay: parseInt(e.target.value, 10) })}
             />
           </div>
           <button onClick={handleSaveRateLimit} disabled={saving} className="primary">

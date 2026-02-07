@@ -47,13 +47,13 @@ export const BillingOverview: React.FC<{ tenantId: string }> = ({ tenantId }) =>
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Billing & Usage</h1>
         <Button>Download All Invoices</Button>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b">
+      <div className="mb-6 flex gap-2 border-b">
         {(['overview', 'invoices', 'plans'] as const).map(tab => (
           <button
             key={tab}
@@ -69,27 +69,27 @@ export const BillingOverview: React.FC<{ tenantId: string }> = ({ tenantId }) =>
       {activeTab === 'overview' && summary && (
         <div className="space-y-6">
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <Card className="p-4">
-              <h3 className="text-gray-500 text-sm">Total Spent</h3>
+              <h3 className="text-sm text-gray-500">Total Spent</h3>
               <p className="text-3xl font-bold">${summary.totalSpent.toLocaleString()}</p>
             </Card>
             <Card className="p-4">
-              <h3 className="text-gray-500 text-sm">Pending Invoices</h3>
+              <h3 className="text-sm text-gray-500">Pending Invoices</h3>
               <p className="text-3xl font-bold">{summary.pendingInvoices.length}</p>
             </Card>
             <Card className="p-4">
-              <h3 className="text-gray-500 text-sm">Active Plans</h3>
+              <h3 className="text-sm text-gray-500">Active Plans</h3>
               <p className="text-3xl font-bold">{summary.plans.filter(p => p.isActive).length}</p>
             </Card>
           </div>
 
           {/* Current Usage */}
           <Card className="p-4">
-            <h3 className="font-semibold mb-4">Current Month Usage</h3>
+            <h3 className="mb-4 font-semibold">Current Month Usage</h3>
             <div className="space-y-2">
               {Object.entries(summary.currentUsage).map(([metric, value]) => (
-                <div key={metric} className="flex justify-between items-center">
+                <div key={metric} className="flex items-center justify-between">
                   <span className="capitalize">{metric.replace(/([A-Z])/g, ' $1')}</span>
                   <span className="font-semibold">{value.toLocaleString()}</span>
                 </div>
@@ -99,11 +99,11 @@ export const BillingOverview: React.FC<{ tenantId: string }> = ({ tenantId }) =>
 
           {/* Usage Alerts */}
           {summary.usageAlerts.length > 0 && (
-            <Card className="p-4 border-yellow-200 bg-yellow-50">
-              <h3 className="font-semibold mb-2 text-yellow-800">Usage Alerts</h3>
+            <Card className="border-yellow-200 bg-yellow-50 p-4">
+              <h3 className="mb-2 font-semibold text-yellow-800">Usage Alerts</h3>
               <div className="space-y-2">
                 {summary.usageAlerts.map(alert => (
-                  <div key={alert.id} className="flex justify-between items-center text-sm">
+                  <div key={alert.id} className="flex items-center justify-between text-sm">
                     <span>{alert.metricType} ({alert.threshold} limit)</span>
                     <span className={alert.alertType === 'CRITICAL' ? 'text-red-600' : 'text-yellow-700'}>
                       {alert.alertType}
@@ -126,10 +126,10 @@ export const BillingOverview: React.FC<{ tenantId: string }> = ({ tenantId }) =>
           ) : (
             summary.pendingInvoices.map(invoice => (
               <Card key={invoice.id} className="p-4">
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold">{invoice.invoiceNumber}</h3>
-                    <p className="text-gray-500 text-sm">
+                    <p className="text-sm text-gray-500">
                       {new Date(invoice.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -148,16 +148,16 @@ export const BillingOverview: React.FC<{ tenantId: string }> = ({ tenantId }) =>
 
       {/* Plans Tab */}
       {activeTab === 'plans' && summary && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {summary.plans.map(plan => (
-            <Card key={plan.id} className={`p-4 ${plan.isDefault ? 'border-blue-500 border-2' : ''}`}>
+            <Card key={plan.id} className={`p-4 ${plan.isDefault ? 'border-2 border-blue-500' : ''}`}>
               {plan.isDefault && (
-                <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded mb-2 inline-block">
+                <span className="mb-2 inline-block rounded bg-blue-500 px-2 py-1 text-xs text-white">
                   Default
                 </span>
               )}
-              <h3 className="font-semibold text-lg">{plan.name}</h3>
-              <p className="text-2xl font-bold mt-2">
+              <h3 className="text-lg font-semibold">{plan.name}</h3>
+              <p className="mt-2 text-2xl font-bold">
                 ${plan.basePrice}
                 <span className="text-sm font-normal text-gray-500">/{plan.billingCycle.toLowerCase()}</span>
               </p>

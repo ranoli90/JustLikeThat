@@ -102,8 +102,8 @@ export default function IntakeForm({ onSubmit }: IntakeFormProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Candidate Intake</h1>
           <p className="mt-2 text-gray-600">
@@ -138,14 +138,14 @@ export default function IntakeForm({ onSubmit }: IntakeFormProps) {
                 </div>
                 <div>
                   <h3 className="font-semibold">Skills</h3>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div className="mt-2 grid grid-cols-2 gap-4">
                     <div>
-                      <h4 className="font-medium text-sm">Technical Skills</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
+                      <h4 className="text-sm font-medium">Technical Skills</h4>
+                      <div className="mt-1 flex flex-wrap gap-2">
                         {Object.entries(result.skillsGraph.technical).map(([skill, level]) => (
                           <span
                             key={skill}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                            className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800"
                           >
                             {skill} ({Math.round(level * 100)}%)
                           </span>
@@ -153,12 +153,12 @@ export default function IntakeForm({ onSubmit }: IntakeFormProps) {
                       </div>
                     </div>
                     <div>
-                      <h4 className="font-medium text-sm">Soft Skills</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
+                      <h4 className="text-sm font-medium">Soft Skills</h4>
+                      <div className="mt-1 flex flex-wrap gap-2">
                         {Object.entries(result.skillsGraph.soft).map(([skill, level]) => (
                           <span
                             key={skill}
-                            className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs"
+                            className="rounded bg-green-100 px-2 py-1 text-xs text-green-800"
                           >
                             {skill} ({Math.round(level * 100)}%)
                           </span>

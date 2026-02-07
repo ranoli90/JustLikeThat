@@ -181,7 +181,7 @@ export const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
                 value={selectedWidget.size.width}
                 onChange={(e) =>
                   updateWidget(selectedWidget.id, {
-                    size: { ...selectedWidget.size, width: parseInt(e.target.value) },
+                    size: { ...selectedWidget.size, width: parseInt(e.target.value, 10) },
                   })
                 }
               />
@@ -195,7 +195,7 @@ export const DashboardBuilder: React.FC<DashboardBuilderProps> = ({
                 value={selectedWidget.size.height}
                 onChange={(e) =>
                   updateWidget(selectedWidget.id, {
-                    size: { ...selectedWidget.size, height: parseInt(e.target.value) },
+                    size: { ...selectedWidget.size, height: parseInt(e.target.value, 10) },
                   })
                 }
               />

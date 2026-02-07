@@ -109,7 +109,7 @@ export const FeatureFlagManager: React.FC = () => {
                   min="0"
                   max="100"
                   value={flag.rolloutPercentage}
-                  onChange={(e) => handleRollout(flag.id, parseInt(e.target.value))}
+                  onChange={(e) => handleRollout(flag.id, parseInt(e.target.value, 10))}
                   style={{ width: '100px' }}
                 />
               </div>

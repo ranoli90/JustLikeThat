@@ -40,7 +40,7 @@ export const LegacySystemManager: React.FC = () => {
 
   const handleConnect = async () => {
     if (!config.systemName || !config.host) {
-      alert('Please fill in required fields');
+      console.error('Please fill in required fields');
       return;
     }
 
@@ -73,7 +73,7 @@ export const LegacySystemManager: React.FC = () => {
       await fetch(`/api/v1/enterprise-integrations/legacy/${connectionId}/sync`, {
         method: 'POST',
       });
-      alert('Sync initiated');
+      console.log('Sync initiated');
     } catch (error) {
       console.error('Sync failed:', error);
     }
@@ -159,7 +159,7 @@ export const LegacySystemManager: React.FC = () => {
                 type="number"
                 placeholder="Default port for selected protocol"
                 value={config.port || ''}
-                onChange={e => setConfig({ ...config, port: parseInt(e.target.value) })}
+                onChange={e => setConfig({ ...config, port: parseInt(e.target.value, 10) })}
               />
             </div>
 

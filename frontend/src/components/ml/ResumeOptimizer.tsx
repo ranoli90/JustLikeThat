@@ -93,15 +93,15 @@ export const ResumeOptimizer: React.FC = () => {
   ] : [];
 
   return (
-    <div className="resume-optimizer p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">AI Resume Optimizer</h2>
+    <div className="resume-optimizer rounded-lg bg-white p-6 shadow-md">
+      <h2 className="mb-4 text-2xl font-bold">AI Resume Optimizer</h2>
       
       {/* Input Section */}
       <div className="input-section mb-6">
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Resume Text</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Resume Text</label>
           <textarea
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full rounded-lg border border-gray-300 p-3 focus:border-indigo-500 focus:ring-indigo-500"
             value={resumeText}
             onChange={(e) => setResumeText(e.target.value)}
             placeholder="Paste your resume text here..."
@@ -110,11 +110,11 @@ export const ResumeOptimizer: React.FC = () => {
         </div>
         
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="mb-1 block text-sm font-medium text-gray-700">
             Target Job Description (Optional)
           </label>
           <textarea
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+            className="w-full rounded-lg border border-gray-300 p-3 focus:border-indigo-500 focus:ring-indigo-500"
             value={targetJobDescription}
             onChange={(e) => setTargetJobDescription(e.target.value)}
             placeholder="Paste the job description you're targeting..."
@@ -125,7 +125,7 @@ export const ResumeOptimizer: React.FC = () => {
         <button
           onClick={handleAnalyze}
           disabled={isAnalyzing || !resumeText.trim()}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}
         </button>
@@ -135,7 +135,7 @@ export const ResumeOptimizer: React.FC = () => {
       {result && (
         <div className="results-section">
           {/* Overall Score */}
-          <div className="overall-score mb-6 p-4 bg-gray-50 rounded-lg">
+          <div className="overall-score mb-6 rounded-lg bg-gray-50 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Overall Optimization Score</h3>
@@ -190,7 +190,7 @@ export const ResumeOptimizer: React.FC = () => {
             <div className="analysis-tab">
               {/* Radar Chart */}
               <div className="mb-6">
-                <h4 className="text-md font-semibold mb-2">Score Breakdown</h4>
+                <h4 className="text-md mb-2 font-semibold">Score Breakdown</h4>
                 <ResponsiveContainer width="100%" height={300}>
                   <RadarChart data={radarData}>
                     <PolarGrid />
@@ -209,11 +209,11 @@ export const ResumeOptimizer: React.FC = () => {
 
               {/* Suggestions */}
               <div className="suggestions">
-                <h4 className="text-md font-semibold mb-2">Optimization Suggestions</h4>
+                <h4 className="text-md mb-2 font-semibold">Optimization Suggestions</h4>
                 {result.suggestions.map((suggestion, index) => (
                   <div
                     key={index}
-                    className={`p-3 mb-2 rounded-lg border-l-4 ${
+                    className={`mb-2 rounded-lg border-l-4 p-3 ${
                       suggestion.priority === 'high'
                         ? 'border-red-500 bg-red-50'
                         : suggestion.priority === 'medium'
@@ -221,9 +221,9 @@ export const ResumeOptimizer: React.FC = () => {
                         : 'border-blue-500 bg-blue-50'
                     }`}
                   >
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="mb-1 flex items-center justify-between">
                       <span className="font-medium capitalize">{suggestion.section}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+                      <span className={`rounded-full px-2 py-1 text-xs ${
                         suggestion.priority === 'high'
                           ? 'bg-red-200 text-red-800'
                           : suggestion.priority === 'medium'
@@ -235,7 +235,7 @@ export const ResumeOptimizer: React.FC = () => {
                     </div>
                     <p className="text-sm text-gray-700">{suggestion.reason}</p>
                     {suggestion.impact > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">Impact: +{suggestion.impact}%</p>
+                      <p className="mt-1 text-xs text-gray-500">Impact: +{suggestion.impact}%</p>
                     )}
                   </div>
                 ))}
@@ -274,21 +274,21 @@ export const ResumeOptimizer: React.FC = () => {
 
               {/* ATS Issues */}
               <div className="issues">
-                <h4 className="text-md font-semibold mb-2">ATS Compatibility Issues</h4>
+                <h4 className="text-md mb-2 font-semibold">ATS Compatibility Issues</h4>
                 {result.atsCompatibility.issues.map((issue, index) => (
                   <div
                     key={index}
-                    className={`p-3 mb-2 rounded-lg ${
+                    className={`mb-2 rounded-lg p-3 ${
                       issue.severity === 'critical'
-                        ? 'bg-red-50 border border-red-200'
+                        ? 'border border-red-200 bg-red-50'
                         : issue.severity === 'warning'
-                        ? 'bg-yellow-50 border border-yellow-200'
-                        : 'bg-blue-50 border border-blue-200'
+                        ? 'border border-yellow-200 bg-yellow-50'
+                        : 'border border-blue-200 bg-blue-50'
                     }`}
                   >
-                    <div className="flex justify-between items-center mb-1">
+                    <div className="mb-1 flex items-center justify-between">
                       <span className="font-medium capitalize">{issue.type} Issue</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+                      <span className={`rounded-full px-2 py-1 text-xs ${
                         issue.severity === 'critical'
                           ? 'bg-red-200 text-red-800'
                           : issue.severity === 'warning'
@@ -299,7 +299,7 @@ export const ResumeOptimizer: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-sm text-gray-700">{issue.message}</p>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="mt-1 text-sm text-gray-500">
                       <span className="font-medium">Recommendation:</span> {issue.recommendation}
                     </p>
                   </div>
@@ -312,16 +312,16 @@ export const ResumeOptimizer: React.FC = () => {
             <div className="keywords-tab">
               {/* Keyword Analysis */}
               <div className="mb-6">
-                <h4 className="text-md font-semibold mb-2">Keyword Analysis</h4>
+                <h4 className="text-md mb-2 font-semibold">Keyword Analysis</h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h5 className="font-medium text-green-600 mb-2">Found Keywords</h5>
+                    <h5 className="mb-2 font-medium text-green-600">Found Keywords</h5>
                     <div className="flex flex-wrap gap-1">
                       {result.keywordAnalysis.foundKeywords.map((keyword, index) => (
                         <span
                           key={index}
-                          className="px-2 py-1 bg-green-100 text-green-800 text-sm rounded"
+                          className="rounded bg-green-100 px-2 py-1 text-sm text-green-800"
                         >
                           {keyword}
                         </span>
@@ -330,12 +330,12 @@ export const ResumeOptimizer: React.FC = () => {
                   </div>
                   
                   <div>
-                    <h5 className="font-medium text-red-600 mb-2">Missing Keywords</h5>
+                    <h5 className="mb-2 font-medium text-red-600">Missing Keywords</h5>
                     <div className="flex flex-wrap gap-1">
                       {result.keywordAnalysis.missingKeywords.map((keyword, index) => (
                         <span
                           key={index}
-                          className="px-2 py-1 bg-red-100 text-red-800 text-sm rounded"
+                          className="rounded bg-red-100 px-2 py-1 text-sm text-red-800"
                         >
                           {keyword}
                         </span>
@@ -347,15 +347,15 @@ export const ResumeOptimizer: React.FC = () => {
 
               {/* Keyword Suggestions */}
               <div>
-                <h4 className="text-md font-semibold mb-2">Keyword Suggestions</h4>
-                <p className="text-sm text-gray-600 mb-2">
+                <h4 className="text-md mb-2 font-semibold">Keyword Suggestions</h4>
+                <p className="mb-2 text-sm text-gray-600">
                   Consider incorporating these terms to improve ATS matching:
                 </p>
                 <div className="flex flex-wrap gap-1">
                   {result.keywordAnalysis.keywordSuggestions.map((keyword, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-purple-100 text-purple-800 text-sm rounded"
+                      className="rounded bg-purple-100 px-2 py-1 text-sm text-purple-800"
                     >
                       {keyword}
                     </span>

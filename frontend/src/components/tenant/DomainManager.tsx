@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { ConfirmModal } from '../modals/ConfirmModal';
 
 interface Domain {
   id: string;
@@ -21,7 +22,7 @@ const StatusBadge: React.FC<{ status: string; variant?: 'success' | 'warning' | 
     default: 'bg-gray-100 text-gray-800',
   };
   return (
-    <span className={`px-2 py-1 rounded text-xs font-medium ${colors[variant || 'default']}`}>
+    <span className={`rounded px-2 py-1 text-xs font-medium ${colors[variant || 'default']}`}>
       {status}
     </span>
   );
@@ -33,6 +34,8 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newDomain, setNewDomain] = useState('');
   const [verifyingDomain, setVerifyingDomain] = useState<string | null>(null);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [removeDomainId, setRemoveDomainId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDomains();
@@ -93,17 +96,24 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
     }
   };
 
-  const removeDomain = async (domainId: string) => {
-    if (!confirm('Are you sure you want to remove this domain?')) return;
-    
-    try {
-      await fetch(`/api/v1/tenants/${tenantId}/domains/${domainId}`, {
-        method: 'DELETE',
-      });
-      loadDomains();
-    } catch (err) {
-      console.error('Failed to remove domain:', err);
+  const handleRemoveDomain = async (domainId: string) => {
+    setRemoveDomainId(domainId);
+    setShowRemoveModal(true);
+  };
+
+  const confirmRemoveDomain = async () => {
+    setShowRemoveModal(false);
+    if (removeDomainId) {
+      try {
+        await fetch(`/api/v1/tenants/${tenantId}/domains/${removeDomainId}`, {
+          method: 'DELETE',
+        });
+        loadDomains();
+      } catch (err) {
+        console.error('Failed to remove domain:', err);
+      }
     }
+    setRemoveDomainId(null);
   };
 
   const getStatusBadge = (domain: Domain) => {
@@ -138,7 +148,7 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Custom Domains</h1>
         <Button onClick={() => setShowAddForm(true)}>
           Add Domain
@@ -147,8 +157,8 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
       {/* Add Domain Form */}
       {showAddForm && (
-        <Card className="p-4 mb-6">
-          <h3 className="font-semibold mb-4">Add Custom Domain</h3>
+        <Card className="mb-6 p-4">
+          <h3 className="mb-4 font-semibold">Add Custom Domain</h3>
           <div className="flex gap-4">
             <Input
               value={newDomain}
@@ -161,7 +171,7 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               Cancel
             </Button>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="mt-2 text-sm text-gray-500">
             After adding, you'll need to configure DNS records and verify ownership.
           </p>
         </Card>
@@ -176,7 +186,7 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
         ) : (
           domains.map(domain => (
             <Card key={domain.id} className="p-4">
-              <div className="flex justify-between items-start">
+              <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold">{domain.domain}</h3>
@@ -185,7 +195,7 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                     {domain.cdnEnabled && <StatusBadge status="CDN Enabled" variant="success" />}
                   </div>
                   {domain.subdomain && (
-                    <p className="text-gray-500 text-sm">{domain.subdomain}</p>
+                    <p className="text-sm text-gray-500">{domain.subdomain}</p>
                   )}
                 </div>
                 <div className="flex gap-2">
@@ -211,7 +221,7 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => removeDomain(domain.id)}
+                    onClick={() => handleRemoveDomain(domain.id)}
                   >
                     Remove
                   </Button>
@@ -219,7 +229,7 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
               </div>
 
               {/* Domain Details */}
-              <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4 text-sm">
+              <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4 text-sm">
                 <div>
                   <p className="text-gray-500">Verification Status</p>
                   <p>{domain.isVerified ? 'Verified' : 'Not Verified'}</p>
@@ -233,6 +243,16 @@ export const DomainManager: React.FC<{ tenantId: string }> = ({ tenantId }) => {
           ))
         )}
       </div>
+      <ConfirmModal
+        isOpen={showRemoveModal}
+        title="Remove Domain"
+        message="Are you sure you want to remove this domain?"
+        onConfirm={confirmRemoveDomain}
+        onCancel={() => {
+          setShowRemoveModal(false);
+          setRemoveDomainId(null);
+        }}
+      />
     </div>
   );
 };

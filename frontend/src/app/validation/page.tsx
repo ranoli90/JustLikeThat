@@ -70,8 +70,8 @@ export default function ValidationPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Validation Checklist</h1>
           <p className="mt-2 text-gray-600">
@@ -79,7 +79,7 @@ export default function ValidationPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* User Journey Table */}
           <Card>
             <CardHeader>
@@ -90,27 +90,27 @@ export default function ValidationPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Step
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Description
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                         Validation
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {userJourney.map((item, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-6 py-4">
                           <span className="font-medium text-gray-900">{item.step}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-6 py-4">
                           <span className="text-sm text-gray-600">{item.description}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="whitespace-nowrap px-6 py-4">
                           <span className="text-sm text-gray-600">{item.validation}</span>
                         </td>
                       </tr>
@@ -130,12 +130,12 @@ export default function ValidationPage() {
               <div className="space-y-6">
                 {accessibilityChecklist.map((category, index) => (
                   <div key={index}>
-                    <h3 className="font-medium text-gray-900 mb-3">{category.category}</h3>
+                    <h3 className="mb-3 font-medium text-gray-900">{category.category}</h3>
                     <div className="space-y-2">
                       {category.items.map((item, subIndex) => (
                         <div key={subIndex} className="flex items-start">
-                          <div className="flex-shrink-0 mt-1">
-                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <div className="mt-1 shrink-0">
+                            <div className="size-2 rounded-full bg-blue-500"></div>
                           </div>
                           <p className="ml-3 text-sm text-gray-600">{item}</p>
                         </div>

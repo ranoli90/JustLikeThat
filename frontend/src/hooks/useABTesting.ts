@@ -4,14 +4,14 @@ import api from '../services/api';
 interface ABVariant {
   id: string;
   name: string;
-  config: any;
+  config: Record<string, unknown>;
 }
 
 interface UseABTestingReturn {
   variant: ABVariant | null;
   isLoading: boolean;
   error: string | null;
-  recordConversion: (conversionType: string, value?: any) => Promise<void>;
+  recordConversion: (conversionType: string, value?: unknown) => Promise<void>;
   refreshVariant: () => Promise<void>;
 }
 
@@ -38,9 +38,10 @@ export function useABTesting(
       } else {
         setError(response.data.error || 'Failed to assign variant');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
       // If user is not in test population, it's not an error
-      if (err.response?.data?.error === 'User not in test population') {
+      if (error.response?.data?.error === 'User not in test population') {
         setVariant(null);
         setError(null);
       } else {
@@ -57,7 +58,7 @@ export function useABTesting(
   }, [fetchVariant]);
 
   const recordConversion = useCallback(
-    async (conversionType: string, value?: any) => {
+    async (conversionType: string, value?: unknown) => {
       if (!assignmentId) {
         console.warn('No assignment ID found for conversion tracking');
         return;

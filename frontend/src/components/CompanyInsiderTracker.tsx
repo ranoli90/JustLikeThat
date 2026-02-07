@@ -59,7 +59,7 @@ export const CompanyInsiderTracker: React.FC = () => {
 
   return (
     <div className="company-insider-tracker">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-bold">Company Insider Connections</h2>
         <button
           className="btn btn-primary"
@@ -70,41 +70,41 @@ export const CompanyInsiderTracker: React.FC = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-          <h3 className="font-bold mb-4">Add Company Insider</h3>
+        <form onSubmit={handleSubmit} className="mb-6 rounded bg-white p-6 shadow">
+          <h3 className="mb-4 font-bold">Add Company Insider</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Company *</label>
+              <label className="mb-1 block text-sm font-medium">Company *</label>
               <input
                 type="text"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Insider Name</label>
+              <label className="mb-1 block text-sm font-medium">Insider Name</label>
               <input
                 type="text"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.insiderName}
                 onChange={(e) => setFormData({ ...formData, insiderName: e.target.value })}
               />
             </div>
             <div>
-              <label text-sm font-medium className="block mb-1">LinkedIn URL</label>
+              <label text-sm font-medium className="mb-1 block">LinkedIn URL</label>
               <input
                 type="url"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.insiderLinkedIn}
                 onChange={(e) => setFormData({ ...formData, insiderLinkedIn: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Relationship</label>
+              <label className="mb-1 block text-sm font-medium">Relationship</label>
               <select
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.relationship}
                 onChange={(e) => setFormData({ ...formData, relationship: e.target.value })}
               >
@@ -117,7 +117,7 @@ export const CompanyInsiderTracker: React.FC = () => {
               </select>
             </div>
           </div>
-          <button type="submit" className="mt-4 btn btn-primary">Add Insider</button>
+          <button type="submit" className="btn btn-primary mt-4">Add Insider</button>
         </form>
       )}
 
@@ -125,12 +125,12 @@ export const CompanyInsiderTracker: React.FC = () => {
         {insiders.map((insider) => (
           <div
             key={insider.id}
-            className="bg-white p-4 rounded shadow cursor-pointer hover:shadow-md"
+            className="cursor-pointer rounded bg-white p-4 shadow hover:shadow-md"
             onClick={() => setSelectedInsider(insider)}
           >
             <h3 className="font-bold">{insider.company}</h3>
             <p className="text-gray-600">{insider.insiderName}</p>
-            <span className="text-xs bg-gray-100 px-2 py-1 rounded">{insider.status}</span>
+            <span className="rounded bg-gray-100 px-2 py-1 text-xs">{insider.status}</span>
           </div>
         ))}
       </div>

@@ -48,18 +48,18 @@ export function FeedbackForm({ type, trigger, onSubmit, onCancel, isLoading = fa
   if (submitted) {
     return (
       <div className="p-6 text-center">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-green-600 text-2xl">✓</span>
+        <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-green-100">
+          <span className="text-2xl text-green-600">✓</span>
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Thank you for your feedback!</h3>
+        <h3 className="mb-2 text-lg font-semibold text-gray-900">Thank you for your feedback!</h3>
         <p className="text-gray-600">Your input helps us improve our service.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+    <div className="rounded-lg bg-white p-6 shadow-lg">
+      <h3 className="mb-4 text-lg font-semibold text-gray-900">
         {type === FeedbackType.NPS && 'How likely are you to recommend us?'}
         {type === FeedbackType.CSAT && 'How satisfied were you with your experience?'}
         {type === FeedbackType.OPEN_ENDED && 'We value your feedback!'}
@@ -78,7 +78,7 @@ export function FeedbackForm({ type, trigger, onSubmit, onCancel, isLoading = fa
                   key={value}
                   type="button"
                   onClick={() => setRating(value)}
-                  className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-medium transition-colors ${
+                  className={`flex size-10 items-center justify-center rounded-full border-2 font-medium transition-colors ${
                     rating === value
                       ? 'border-blue-600 bg-blue-600 text-white'
                       : 'border-gray-300 text-gray-700 hover:border-blue-400'
@@ -103,7 +103,7 @@ export function FeedbackForm({ type, trigger, onSubmit, onCancel, isLoading = fa
                   key={value}
                   type="button"
                   onClick={() => setRating(value)}
-                  className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-medium transition-colors ${
+                  className={`flex size-10 items-center justify-center rounded-full border-2 font-medium transition-colors ${
                     rating === value
                       ? 'border-blue-600 bg-blue-600 text-white'
                       : 'border-gray-300 text-gray-700 hover:border-blue-400'
@@ -117,7 +117,7 @@ export function FeedbackForm({ type, trigger, onSubmit, onCancel, isLoading = fa
         )}
 
         <div>
-          <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="comment" className="mb-1 block text-sm font-medium text-gray-700">
             Additional comments (optional)
           </label>
           <TextArea
@@ -130,7 +130,7 @@ export function FeedbackForm({ type, trigger, onSubmit, onCancel, isLoading = fa
           />
         </div>
 
-        <div className="flex gap-3 justify-end">
+        <div className="flex justify-end gap-3">
           {onCancel && (
             <Button
               type="button"
@@ -144,7 +144,7 @@ export function FeedbackForm({ type, trigger, onSubmit, onCancel, isLoading = fa
           <Button
             type="submit"
             disabled={isLoading || (type !== FeedbackType.OPEN_ENDED && !rating)}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 text-white hover:bg-blue-700"
           >
             {isLoading ? 'Submitting...' : 'Submit Feedback'}
           </Button>

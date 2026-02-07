@@ -72,24 +72,24 @@ export const TracingDashboard: React.FC = () => {
     try {
       const response = await fetch(`/api/v1/tracing/trace/${traceId}`);
       const data = await response.json();
-      setSelectedTrace(data.trace?.[0] || null);
+      setSelectedTrace(data.trace?.at(0) ?? null);
     } catch (error) {
       console.error('Failed to fetch trace details:', error);
     }
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Distributed Tracing Dashboard</h1>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="mb-6 text-2xl font-bold">Distributed Tracing Dashboard</h1>
       
-      <div className="mb-6 bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Services</h2>
-        <div className="flex gap-2 flex-wrap">
+      <div className="mb-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">Services</h2>
+        <div className="flex flex-wrap gap-2">
           {services.map((service) => (
             <button
               key={service.name}
               onClick={() => setSelectedService(service.name)}
-              className={`px-4 py-2 rounded ${
+              className={`rounded px-4 py-2 ${
                 selectedService === service.name
                   ? 'bg-blue-500 text-white'
                   : 'bg-gray-200 hover:bg-gray-300'
@@ -101,8 +101,8 @@ export const TracingDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="mb-6 bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Trace Duration Over Time</h2>
+      <div className="mb-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">Trace Duration Over Time</h2>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={durationChartData}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -115,10 +115,10 @@ export const TracingDashboard: React.FC = () => {
         </ResponsiveContainer>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Recent Traces</h2>
+      <div className="rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">Recent Traces</h2>
         {loading ? (
-          <div className="text-center py-4">Loading...</div>
+          <div className="py-4 text-center">Loading...</div>
         ) : (
           <table className="w-full">
             <thead>
@@ -155,9 +155,9 @@ export const TracingDashboard: React.FC = () => {
       </div>
 
       {selectedTrace && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-black/50 p-4">
+          <div className="max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6">
+            <div className="mb-4 flex items-center justify-between">
               <h3 className="text-xl font-bold">Trace Details</h3>
               <button
                 onClick={() => setSelectedTrace(null)}
@@ -174,7 +174,7 @@ export const TracingDashboard: React.FC = () => {
               <div><strong>Duration:</strong> {selectedTrace.duration}ms</div>
               <div>
                 <strong>Tags:</strong>
-                <pre className="bg-gray-100 p-2 rounded mt-1">
+                <pre className="mt-1 rounded bg-gray-100 p-2">
                   {JSON.stringify(selectedTrace.tags, null, 2)}
                 </pre>
               </div>

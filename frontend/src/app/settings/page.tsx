@@ -90,15 +90,15 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-1/4 mb-6"></div>
+            <div className="mb-6 h-8 w-1/4 rounded bg-gray-300"></div>
             <div className="space-y-6">
-              <div className="h-64 bg-gray-300 rounded"></div>
-              <div className="h-64 bg-gray-300 rounded"></div>
-              <div className="h-64 bg-gray-300 rounded"></div>
-              <div className="h-48 bg-gray-300 rounded"></div>
+              <div className="h-64 rounded bg-gray-300"></div>
+              <div className="h-64 rounded bg-gray-300"></div>
+              <div className="h-64 rounded bg-gray-300"></div>
+              <div className="h-48 rounded bg-gray-300"></div>
             </div>
           </div>
         </div>
@@ -107,8 +107,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
           <p className="mt-2 text-gray-600">
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                 value={automationConfig.dailyApplicationLimit}
                 onChange={(e) => setAutomationConfig(prev => ({
                   ...prev,
-                  dailyApplicationLimit: parseInt(e.target.value),
+                  dailyApplicationLimit: parseInt(e.target.value, 10),
                 }))}
                 placeholder="10"
               />
@@ -275,7 +275,7 @@ export default function SettingsPage() {
                 value={securitySettings.sessionTimeout}
                 onChange={(e) => setSecuritySettings(prev => ({
                   ...prev,
-                  sessionTimeout: parseInt(e.target.value),
+                  sessionTimeout: parseInt(e.target.value, 10),
                 }))}
                 placeholder="30"
               />
@@ -324,11 +324,11 @@ export default function SettingsPage() {
           </Card>
 
           {/* Save and Logout */}
-          <div className="flex justify-between items-center">
+          <div className="flex items-center justify-between">
             <Button
               variant="outline"
               onClick={logout}
-              className="text-red-600 hover:text-red-700 border-red-300 hover:bg-red-50 focus:ring-red-500"
+              className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 focus:ring-red-500"
             >
               Sign Out
             </Button>

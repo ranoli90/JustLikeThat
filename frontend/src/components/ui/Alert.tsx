@@ -21,7 +21,7 @@ export const Alert = ({
   };
 
   return (
-    <div className={`p-4 rounded-md border ${variantClasses[variant]} ${className}`}>
+    <div className={`rounded-md border p-4 ${variantClasses[variant]} ${className}`}>
       {children}
     </div>
   );

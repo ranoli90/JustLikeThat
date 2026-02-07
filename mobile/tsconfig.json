@@ -8,6 +8,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
+    "types": ["react-native", "jest", "node"],
     "paths": {
       "@/*": ["src/*"],
       "@components/*": ["src/components/*"],

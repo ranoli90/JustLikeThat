@@ -443,7 +443,7 @@ export const CostTracker: React.FC = () => {
                           label={cost.category.replace('_', ' ')}
                           size="small"
                           sx={{
-                            backgroundColor: getCategoryColor(cost.category) + '20',
+                            backgroundColor: `${getCategoryColor(cost.category)  }20`,
                             color: getCategoryColor(cost.category),
                           }}
                         />

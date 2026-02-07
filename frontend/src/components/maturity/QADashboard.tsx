@@ -41,7 +41,7 @@ export const QADashboard: React.FC = () => {
   const handleExecuteTests = async (suiteId: string, environment: string) => {
     try {
       await QAAPI.executeTests({ suiteId, environment });
-      alert('Test execution started!');
+      console.log('Test execution started!');
       loadReports();
     } catch (error) {
       console.error('Failed to execute tests:', error);

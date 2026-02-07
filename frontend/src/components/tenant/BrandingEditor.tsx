@@ -99,7 +99,7 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
   };
 
   const handleColorChange = (key: keyof BrandingConfig, value: string) => {
-    setBranding(prev => prev ? { ...prev, [key]: value } : null);
+    setBranding(prev => (prev ? { ...prev, [key]: value } : null));
   };
 
   if (loading) {
@@ -108,7 +108,7 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Branding Editor</h1>
         <Button onClick={saveBranding} loading={saving}>
           Save Changes
@@ -116,16 +116,16 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
       </div>
 
       {/* Theme Quick Select */}
-      <Card className="p-4 mb-6">
-        <h3 className="font-semibold mb-3">Quick Themes</h3>
+      <Card className="mb-6 p-4">
+        <h3 className="mb-3 font-semibold">Quick Themes</h3>
         <div className="flex gap-2">
           {THEMES.map(theme => (
             <button
               key={theme.id}
               onClick={() => applyTheme(theme.id)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg border hover:bg-gray-50"
+              className="flex items-center gap-2 rounded-lg border px-3 py-2 hover:bg-gray-50"
             >
-              <div className="w-6 h-6 rounded-full" style={{
+              <div className="size-6 rounded-full" style={{
                 background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
               }} />
               <span className="text-sm">{theme.name}</span>
@@ -135,7 +135,7 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
       </Card>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-4 border-b">
+      <div className="mb-4 flex gap-2 border-b">
         {(['colors', 'typography', 'assets', 'custom'] as const).map(tab => (
           <button
             key={tab}
@@ -149,7 +149,7 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
 
       {/* Colors Tab */}
       {activeTab === 'colors' && (
-        <Card className="p-4 space-y-4">
+        <Card className="space-y-4 p-4">
           {[
             { key: 'primaryColor', label: 'Primary Color' },
             { key: 'secondaryColor', label: 'Secondary Color' },
@@ -163,7 +163,7 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
                 type="color"
                 value={branding?.[key as keyof BrandingConfig] || '#000000'}
                 onChange={(e) => handleColorChange(key as keyof BrandingConfig, e.target.value)}
-                className="w-10 h-10 rounded cursor-pointer"
+                className="size-10 cursor-pointer rounded"
               />
               <Input
                 value={branding?.[key as keyof BrandingConfig] || ''}
@@ -177,13 +177,13 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
 
       {/* Typography Tab */}
       {activeTab === 'typography' && (
-        <Card className="p-4 space-y-4">
+        <Card className="space-y-4 p-4">
           <div className="flex items-center gap-4">
             <label className="w-32 text-sm font-medium">Primary Font</label>
             <select
               value={branding?.primaryFont || 'Inter'}
-              onChange={(e) => setBranding(prev => prev ? { ...prev, primaryFont: e.target.value } : null)}
-              className="border rounded px-3 py-2"
+              onChange={(e) => setBranding(prev => (prev ? { ...prev, primaryFont: e.target.value } : null))}
+              className="rounded border px-3 py-2"
             >
               {FONTS.map(font => (
                 <option key={font.value} value={font.value}>{font.label}</option>
@@ -194,8 +194,8 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
             <label className="w-32 text-sm font-medium">Secondary Font</label>
             <select
               value={branding?.secondaryFont || 'Roboto'}
-              onChange={(e) => setBranding(prev => prev ? { ...prev, secondaryFont: e.target.value } : null)}
-              className="border rounded px-3 py-2"
+              onChange={(e) => setBranding(prev => (prev ? { ...prev, secondaryFont: e.target.value } : null))}
+              className="rounded border px-3 py-2"
             >
               {FONTS.map(font => (
                 <option key={font.value} value={font.value}>{font.label}</option>
@@ -207,7 +207,7 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
 
       {/* Assets Tab */}
       {activeTab === 'assets' && (
-        <Card className="p-4 space-y-4">
+        <Card className="space-y-4 p-4">
           {[
             { key: 'logoUrl', label: 'Logo', type: 'logo' },
             { key: 'faviconUrl', label: 'Favicon', type: 'favicon' },
@@ -233,22 +233,22 @@ export const BrandingEditor: React.FC<{ tenantId: string }> = ({ tenantId }) => 
 
       {/* Custom Code Tab */}
       {activeTab === 'custom' && (
-        <Card className="p-4 space-y-4">
+        <Card className="space-y-4 p-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Custom CSS</label>
+            <label className="mb-2 block text-sm font-medium">Custom CSS</label>
             <textarea
               value={branding?.customCss || ''}
-              onChange={(e) => setBranding(prev => prev ? { ...prev, customCss: e.target.value } : null)}
-              className="w-full h-32 font-mono text-sm border rounded p-3"
+              onChange={(e) => setBranding(prev => (prev ? { ...prev, customCss: e.target.value } : null))}
+              className="h-32 w-full rounded border p-3 font-mono text-sm"
               placeholder="/* Your custom CSS here */"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Custom JavaScript</label>
+            <label className="mb-2 block text-sm font-medium">Custom JavaScript</label>
             <textarea
               value={branding?.customJs || ''}
-              onChange={(e) => setBranding(prev => prev ? { ...prev, customJs: e.target.value } : null)}
-              className="w-full h-32 font-mono text-sm border rounded p-3"
+              onChange={(e) => setBranding(prev => (prev ? { ...prev, customJs: e.target.value } : null))}
+              className="h-32 w-full rounded border p-3 font-mono text-sm"
               placeholder="// Your custom JavaScript here"
             />
           </div>

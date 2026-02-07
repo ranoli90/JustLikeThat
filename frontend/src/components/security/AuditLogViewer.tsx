@@ -172,8 +172,8 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({
                   <td>{new Date(log.createdAt).toLocaleString()}</td>
                   <td>{log.action}</td>
                   <td>{log.resource}</td>
-                  <td>{log.userId || 'System'}</td>
-                  <td>{log.ipAddress}</td>
+                  <td className="p-3">{log.user?.email || log.userId}</td>
+                  <td className="p-3">{log.resourceType}</td>
                   <td>
                     <span
                       className="risk-badge"
@@ -181,6 +181,9 @@ export const AuditLogViewer: React.FC<AuditLogViewerProps> = ({
                     >
                       {log.riskLevel}
                     </span>
+                  </td>
+                  <td className="p-3 max-w-xs truncate" title={Array.isArray(log.details?.changes) ? log.details.changes.at(-1) : ''}>
+                    {Array.isArray(log.details?.changes) ? log.details.changes.at(-1) : ''}
                   </td>
                   <td>
                     <button

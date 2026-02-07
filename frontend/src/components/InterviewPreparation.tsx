@@ -570,7 +570,7 @@ const QuestionBank: React.FC = () => {
     try {
       const data = await interviewAPI.generateQuestions(questionType, undefined, 10);
       setQuestions(data);
-      setSelectedQuestion(data[0]);
+      setSelectedQuestion(data.at(0) ?? null);
     } catch (error) {
       console.error('Failed to load questions:', error);
     }

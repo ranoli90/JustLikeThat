@@ -94,20 +94,20 @@ export default function ABTestingPanel({
           <CardContent>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Test Name
                 </label>
                 <input
                   type="text"
                   value={newTest.name}
                   onChange={(e) => setNewTest({ ...newTest, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
                   placeholder="e.g., Modern vs Classic Resume"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="mb-1 block text-sm font-medium text-gray-700">
                   Document Type
                 </label>
                 <Select
@@ -121,11 +121,11 @@ export default function ABTestingPanel({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   Variants
                 </label>
                 {newTest.variants.map((variant, index) => (
-                  <div key={index} className="p-4 bg-gray-50 rounded-lg mb-3">
+                  <div key={index} className="mb-3 rounded-lg bg-gray-50 p-4">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-xs text-gray-500">Name</label>
@@ -137,7 +137,7 @@ export default function ABTestingPanel({
                             variants[index].name = e.target.value;
                             setNewTest({ ...newTest, variants });
                           }}
-                          className="w-full px-2 py-1 text-sm border rounded"
+                          className="w-full rounded border px-2 py-1 text-sm"
                         />
                       </div>
                       <div>
@@ -181,10 +181,10 @@ export default function ABTestingPanel({
                           value={variant.weight}
                           onChange={(e) => {
                             const variants = [...newTest.variants];
-                            variants[index].weight = parseInt(e.target.value);
+                            variants[index].weight = parseInt(e.target.value, 10);
                             setNewTest({ ...newTest, variants });
                           }}
-                          className="w-full px-2 py-1 text-sm border rounded"
+                          className="w-full rounded border px-2 py-1 text-sm"
                           min="0"
                           max="100"
                         />
@@ -195,10 +195,19 @@ export default function ABTestingPanel({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setNewTest({
-                    ...newTest,
-                    variants: [...newTest.variants, { id: `${Date.now()}`, name: `Variant ${String.fromCharCode(65 + newTest.variants.length)}`, template: 'modern', voiceStyle: 'professional', weight: 50 }],
-                  })}
+                  onClick={() => {
+                    const newVariant = {
+                      id: `${Date.now()}`,
+                      name: `Variant ${String.fromCharCode(65 + newTest.variants.length)}`,
+                      template: 'modern',
+                      voiceStyle: 'professional',
+                      weight: 50,
+                    };
+                    setNewTest({
+                      ...newTest,
+                      variants: [...newTest.variants, newVariant],
+                    });
+                  }}
                 >
                   Add Variant
                 </Button>
@@ -228,23 +237,23 @@ export default function ABTestingPanel({
         {tests.map((test) => (
           <Card key={test.id}>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <CardTitle>{test.name}</CardTitle>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(test.status)}`}>
+                <span className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusColor(test.status)}`}>
                   {test.status}
                 </span>
               </div>
             </CardHeader>
             <CardContent>
               {/* Variants */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3">
                 {test.variants.map((variant) => (
-                  <div key={variant.id} className="p-3 bg-gray-50 rounded-lg">
+                  <div key={variant.id} className="rounded-lg bg-gray-50 p-3">
                     <p className="font-medium text-gray-900">{variant.name}</p>
                     <p className="text-sm text-gray-500">
                       {variant.template} / {variant.voiceStyle}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="mt-1 text-xs text-gray-400">
                       Weight: {variant.weight}%
                     </p>
                   </div>
@@ -253,11 +262,11 @@ export default function ABTestingPanel({
 
               {/* Results */}
               {test.results && (
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="font-medium text-blue-900 mb-2">Results</p>
+                <div className="mb-4 rounded-lg bg-blue-50 p-4">
+                  <p className="mb-2 font-medium text-blue-900">Results</p>
                   <div className="space-y-2">
                     {test.results.variants.map((variant) => (
-                      <div key={variant.id} className="flex justify-between items-center">
+                      <div key={variant.id} className="flex items-center justify-between">
                         <span>{variant.name}</span>
                         <span className="font-medium">
                           Score: {variant.score}% ({variant.conversions} conversions)
@@ -265,7 +274,7 @@ export default function ABTestingPanel({
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 pt-3 border-t border-blue-200">
+                  <div className="mt-3 border-t border-blue-200 pt-3">
                     <p className="text-sm text-blue-700">
                       Winner: <strong>{test.results.winner}</strong> with{' '}
                       {test.results.confidence}% confidence

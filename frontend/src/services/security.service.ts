@@ -7,19 +7,19 @@ interface ApiResponse<T> {
 }
 
 // Dashboard
-export const getSecurityDashboard = async (): Promise<any> => {
+export const getSecurityDashboard = async (): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/dashboard`);
   return response.json();
 };
 
 // Threats
-export const getThreats = async (status?: string): Promise<any[]> => {
+export const getThreats = async (status?: string): Promise<ApiResponse<unknown[]>> => {
   const url = status ? `${API_BASE}/threats?status=${status}` : `${API_BASE}/threats`;
   const response = await fetch(url);
   return response.json();
 };
 
-export const mitigateThreat = async (threatId: string): Promise<any> => {
+export const mitigateThreat = async (threatId: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/threats/${threatId}/mitigate`, {
     method: 'POST',
   });
@@ -27,12 +27,12 @@ export const mitigateThreat = async (threatId: string): Promise<any> => {
 };
 
 // Encryption
-export const getEncryptionStatus = async (): Promise<any> => {
+export const getEncryptionStatus = async (): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/encryption/status`);
   return response.json();
 };
 
-export const rotateEncryptionKey = async (): Promise<any> => {
+export const rotateEncryptionKey = async (): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/encryption/rotate-key`, {
     method: 'POST',
   });
@@ -60,7 +60,7 @@ export const getAuditLogs = async (params?: {
   return response.json();
 };
 
-export const exportAuditLogs = async (startDate: string, endDate: string): Promise<any> => {
+export const exportAuditLogs = async (startDate: string, endDate: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(
     `${API_BASE}/audit/export?startDate=${startDate}&endDate=${endDate}`,
   );
@@ -84,7 +84,7 @@ export const verifyMfa = async (data: {
   userId: string;
   code: string;
   method: string;
-}): Promise<any> => {
+}): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/mfa/verify`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -93,7 +93,7 @@ export const verifyMfa = async (data: {
   return response.json();
 };
 
-export const disableMfa = async (userId: string): Promise<any> => {
+export const disableMfa = async (userId: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/mfa/disable`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -102,29 +102,29 @@ export const disableMfa = async (userId: string): Promise<any> => {
   return response.json();
 };
 
-export const getMfaStatus = async (userId: string): Promise<any> => {
+export const getMfaStatus = async (userId: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/mfa/status/${userId}`);
   return response.json();
 };
 
 // Compliance
-export const getGdprCompliance = async (): Promise<any> => {
+export const getGdprCompliance = async (): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/compliance/gdpr`);
   return response.json();
 };
 
-export const getCcpaCompliance = async (): Promise<any> => {
+export const getCcpaCompliance = async (): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/compliance/ccpa`);
   return response.json();
 };
 
-export const getComplianceReport = async (type: string): Promise<any> => {
+export const getComplianceReport = async (type: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/compliance/report?type=${type}`);
   return response.json();
 };
 
 // Consent
-export const getUserConsent = async (userId: string): Promise<any> => {
+export const getUserConsent = async (userId: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/consent/${userId}`);
   return response.json();
 };
@@ -134,7 +134,7 @@ export const updateConsent = async (data: {
   consentType: string;
   granted: boolean;
   version: string;
-}): Promise<any> => {
+}): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/consent`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -143,12 +143,12 @@ export const updateConsent = async (data: {
   return response.json();
 };
 
-export const exportUserData = async (userId: string): Promise<any> => {
+export const exportUserData = async (userId: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/consent/${userId}/export`);
   return response.json();
 };
 
-export const deleteUserData = async (userId: string): Promise<any> => {
+export const deleteUserData = async (userId: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/consent/${userId}`, {
     method: 'DELETE',
   });
@@ -156,32 +156,32 @@ export const deleteUserData = async (userId: string): Promise<any> => {
 };
 
 // Vulnerabilities
-export const getVulnerabilities = async (): Promise<any[]> => {
+export const getVulnerabilities = async (): Promise<ApiResponse<unknown[]>> => {
   const response = await fetch(`${API_BASE}/vulnerabilities`);
   return response.json();
 };
 
-export const runVulnerabilityScan = async (): Promise<any> => {
+export const runVulnerabilityScan = async (): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/vulnerabilities/scan`, {
     method: 'POST',
   });
   return response.json();
 };
 
-export const patchVulnerability = async (vulnerabilityId: string): Promise<any> => {
+export const patchVulnerability = async (vulnerabilityId: string): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/vulnerabilities/${vulnerabilityId}/patch`, {
     method: 'POST',
   });
   return response.json();
 };
 
-export const getVulnerabilityReport = async (): Promise<any> => {
+export const getVulnerabilityReport = async (): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/vulnerabilities/report`);
   return response.json();
 };
 
 // API Security
-export const getRateLimits = async (): Promise<any[]> => {
+export const getRateLimits = async (): Promise<ApiResponse<unknown[]>> => {
   const response = await fetch(`${API_BASE}/api-security/rate-limits`);
   return response.json();
 };
@@ -189,7 +189,7 @@ export const getRateLimits = async (): Promise<any[]> => {
 export const updateRateLimit = async (
   endpoint: string,
   limits: { maxRequests: number; windowSeconds: number },
-): Promise<any> => {
+): Promise<ApiResponse<unknown>> => {
   const response = await fetch(`${API_BASE}/api-security/rate-limits/${endpoint}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -223,7 +223,7 @@ export const SecurityService = {
   getVulnerabilityReport,
   getRateLimits,
   updateRateLimit,
-  applyRetentionPolicies: async (): Promise<any> => {
+  applyRetentionPolicies: async (): Promise<ApiResponse<unknown>> => {
     const response = await fetch(`${API_BASE}/retention/apply`, {
       method: 'POST',
     });

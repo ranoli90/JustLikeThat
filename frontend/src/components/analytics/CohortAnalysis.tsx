@@ -12,9 +12,9 @@ export const CohortAnalysis: React.FC<CohortAnalysisProps> = ({ cohorts, onCompa
 
   const toggleCohortSelection = (cohortId: string) => {
     setSelectedCohorts((prev) =>
-      prev.includes(cohortId)
+      (prev.includes(cohortId)
         ? prev.filter((id) => id !== cohortId)
-        : [...prev, cohortId]
+        : [...prev, cohortId])
     );
   };
 
@@ -235,7 +235,8 @@ const getRetentionColor = (pct: number): string => {
 
 const getBestPerformingCohort = (cohorts: CohortConfig[]): string => {
   if (cohorts.length === 0) return 'N/A';
-  let best = cohorts[0];
+  const [firstCohort] = cohorts;
+  let best = firstCohort;
   for (const cohort of cohorts) {
     const day7 = cohort.retentionData.find((r) => r.period === 7);
     const bestDay7 = best.retentionData.find((r) => r.period === 7);

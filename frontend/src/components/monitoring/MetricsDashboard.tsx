@@ -75,22 +75,22 @@ export const MetricsDashboard: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Metrics Dashboard</h1>
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="mb-6 text-2xl font-bold">Metrics Dashboard</h1>
 
       {/* Alert Summary */}
-      <div className="mb-6 bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Active Alerts</h2>
+      <div className="mb-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">Active Alerts</h2>
         {alerts.length === 0 ? (
           <div className="text-green-500">No active alerts</div>
         ) : (
           <div className="space-y-2">
             {alerts.map((alert) => (
-              <div key={alert.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                <span className={`w-3 h-3 rounded-full ${getSeverityColor(alert.severity)}`} />
+              <div key={alert.id} className="flex items-center gap-2 rounded bg-gray-50 p-2">
+                <span className={`size-3 rounded-full ${getSeverityColor(alert.severity)}`} />
                 <span className="font-medium">{alert.name}</span>
-                <span className="text-gray-500 text-sm">{alert.severity}</span>
-                <span className="text-gray-500 text-sm ml-auto">
+                <span className="text-sm text-gray-500">{alert.severity}</span>
+                <span className="ml-auto text-sm text-gray-500">
                   {new Date(alert.startsAt).toLocaleString()}
                 </span>
               </div>
@@ -100,12 +100,12 @@ export const MetricsDashboard: React.FC = () => {
       </div>
 
       {/* Metric Selector */}
-      <div className="mb-6 bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Metrics</h2>
+      <div className="mb-6 rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">Metrics</h2>
         <select
           value={selectedMetric}
           onChange={(e) => handleMetricSelect(e.target.value)}
-          className="w-full p-2 border rounded"
+          className="w-full rounded border p-2"
         >
           <option value="">Select a metric...</option>
           {metricNames.map((name) => (
@@ -115,12 +115,12 @@ export const MetricsDashboard: React.FC = () => {
       </div>
 
       {/* Metrics Table */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">
+      <div className="rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">
           {selectedMetric ? selectedMetric : 'Select a metric to view data'}
         </h2>
         {loading ? (
-          <div className="text-center py-4">Loading...</div>
+          <div className="py-4 text-center">Loading...</div>
         ) : metrics.length > 0 ? (
           <table className="w-full">
             <thead>
@@ -145,7 +145,7 @@ export const MetricsDashboard: React.FC = () => {
             </tbody>
           </table>
         ) : (
-          <div className="text-center py-4 text-gray-500">No data available</div>
+          <div className="py-4 text-center text-gray-500">No data available</div>
         )}
       </div>
     </div>

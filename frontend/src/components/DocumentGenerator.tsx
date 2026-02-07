@@ -78,14 +78,14 @@ export default function DocumentGenerator({ onGenerate, isLoading = false }: Doc
           <CardTitle>Document Generator</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Document Type
               </label>
               <Select
                 value={options.documentType}
-                onChange={(e) => setOptions({ ...options, documentType: e.target.value as any })}
+                onChange={(e) => setOptions({ ...options, documentType: e.target.value as DocumentGenerationOptions['documentType'] })}
                 options={[
                   { value: 'RESUME', label: 'Resume' },
                   { value: 'COVER_LETTER', label: 'Cover Letter' },
@@ -95,7 +95,7 @@ export default function DocumentGenerator({ onGenerate, isLoading = false }: Doc
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Template
               </label>
               <Select
@@ -106,18 +106,18 @@ export default function DocumentGenerator({ onGenerate, isLoading = false }: Doc
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Output Format
               </label>
               <Select
                 value={options.format}
-                onChange={(e) => setOptions({ ...options, format: e.target.value as any })}
+                onChange={(e) => setOptions({ ...options, format: e.target.value as DocumentGenerationOptions['format'] })}
                 options={FORMATS.map((f) => ({ value: f.id, label: f.name }))}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
                 Voice Style
               </label>
               <Select
@@ -173,7 +173,7 @@ export default function DocumentGenerator({ onGenerate, isLoading = false }: Doc
                 {qualityScore}%
               </div>
               <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-4 overflow-hidden rounded-full bg-gray-200">
                   <div
                     className={`h-full rounded-full ${
                       qualityScore >= 80 ? 'bg-green-500' :

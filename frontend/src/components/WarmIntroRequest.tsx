@@ -85,7 +85,7 @@ export const WarmIntroRequest: React.FC = () => {
 
   return (
     <div className="warm-intro-manager">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h2 className="text-xl font-bold">Warm Introduction Requests</h2>
         <button
           className="btn btn-primary"
@@ -96,70 +96,70 @@ export const WarmIntroRequest: React.FC = () => {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-          <h3 className="font-bold mb-4">Request a Warm Introduction</h3>
+        <form onSubmit={handleSubmit} className="mb-6 rounded bg-white p-6 shadow">
+          <h3 className="mb-4 font-bold">Request a Warm Introduction</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Target Name *</label>
+              <label className="mb-1 block text-sm font-medium">Target Name *</label>
               <input
                 type="text"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.targetName}
                 onChange={(e) => setFormData({ ...formData, targetName: e.target.value })}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Target Email</label>
+              <label className="mb-1 block text-sm font-medium">Target Email</label>
               <input
                 type="email"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.targetEmail}
                 onChange={(e) => setFormData({ ...formData, targetEmail: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Target Company *</label>
+              <label className="mb-1 block text-sm font-medium">Target Company *</label>
               <input
                 type="text"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.targetCompany}
                 onChange={(e) => setFormData({ ...formData, targetCompany: e.target.value })}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Target Job Title</label>
+              <label className="mb-1 block text-sm font-medium">Target Job Title</label>
               <input
                 type="text"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.targetJobTitle}
                 onChange={(e) => setFormData({ ...formData, targetJobTitle: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Mutual Connection Name *</label>
+              <label className="mb-1 block text-sm font-medium">Mutual Connection Name *</label>
               <input
                 type="text"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.mutualConnectionName}
                 onChange={(e) => setFormData({ ...formData, mutualConnectionName: e.target.value })}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Mutual Connection Email</label>
+              <label className="mb-1 block text-sm font-medium">Mutual Connection Email</label>
               <input
                 type="email"
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.mutualConnectionEmail}
                 onChange={(e) => setFormData({ ...formData, mutualConnectionEmail: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Request Type</label>
+              <label className="mb-1 block text-sm font-medium">Request Type</label>
               <select
-                className="w-full border p-2 rounded"
+                className="w-full rounded border p-2"
                 value={formData.requestType}
                 onChange={(e) => setFormData({ ...formData, requestType: e.target.value })}
               >
@@ -173,9 +173,9 @@ export const WarmIntroRequest: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <label className="block text-sm font-medium mb-1">Why do you want this introduction? *</label>
+            <label className="mb-1 block text-sm font-medium">Why do you want this introduction? *</label>
             <textarea
-              className="w-full border p-2 rounded"
+              className="w-full rounded border p-2"
               rows={3}
               value={formData.reasonForIntro}
               onChange={(e) => setFormData({ ...formData, reasonForIntro: e.target.value })}
@@ -183,15 +183,15 @@ export const WarmIntroRequest: React.FC = () => {
             />
           </div>
           <div className="mt-4">
-            <label className="block text-sm font-medium mb-1">What value can you provide?</label>
+            <label className="mb-1 block text-sm font-medium">What value can you provide?</label>
             <textarea
-              className="w-full border p-2 rounded"
+              className="w-full rounded border p-2"
               rows={2}
               value={formData.proposedValue}
               onChange={(e) => setFormData({ ...formData, proposedValue: e.target.value })}
             />
           </div>
-          <button type="submit" className="mt-4 btn btn-primary">
+          <button type="submit" className="btn btn-primary mt-4">
             Submit Request
           </button>
         </form>
@@ -199,22 +199,22 @@ export const WarmIntroRequest: React.FC = () => {
 
       <div className="grid gap-4">
         {introRequests.map((intro) => (
-          <div key={intro.id} className="bg-white p-4 rounded shadow">
-            <div className="flex justify-between items-start">
+          <div key={intro.id} className="rounded bg-white p-4 shadow">
+            <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-bold">{intro.targetName}</h3>
-                <p className="text-gray-500 text-sm">
+                <p className="text-sm text-gray-500">
                   {intro.targetCompany} • {intro.requestType.replace('_', ' ')}
                 </p>
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="mt-1 text-sm text-gray-400">
                   Via: {intro.mutualConnectionName}
                 </p>
               </div>
               <div className="text-right">
-                <span className={`px-2 py-1 rounded text-sm ${getStatusColor(intro.status)}`}>
+                <span className={`rounded px-2 py-1 text-sm ${getStatusColor(intro.status)}`}>
                   {intro.status}
                 </span>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="mt-1 text-xs text-gray-400">
                   {new Date(intro.createdAt).toLocaleDateString()}
                 </p>
               </div>
@@ -250,7 +250,7 @@ export const WarmIntroRequest: React.FC = () => {
       </div>
 
       {introRequests.length === 0 && (
-        <div className="text-center py-8 text-gray-500">
+        <div className="py-8 text-center text-gray-500">
           No warm introduction requests yet.
         </div>
       )}

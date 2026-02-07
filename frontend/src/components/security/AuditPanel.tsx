@@ -30,7 +30,7 @@ export const AuditPanel: React.FC = () => {
 
   const handleExport = async () => {
     if (!filters.startDate || !filters.endDate) {
-      alert('Please select start and end dates for export');
+      console.error('Please select start and end dates for export');
       return;
     }
     setExporting(true);
@@ -132,7 +132,7 @@ export const AuditPanel: React.FC = () => {
                       {log.details && (
                         <button
                           className="details-btn"
-                          onClick={() => alert(JSON.stringify(log.details, null, 2))}
+                          onClick={() => console.log('Audit log details: ', log.details)}
                         >
                           View
                         </button>

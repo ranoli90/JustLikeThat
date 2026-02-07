@@ -96,42 +96,42 @@ export const DRPlanning: React.FC = () => {
 
   if (metricsLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Disaster Recovery Planning</h1>
         <p className="text-gray-600">Manage DR plans, run tests, and monitor failover events</p>
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-6">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Active Plans</div>
           <div className="text-2xl font-bold text-blue-600">{metrics?.activePlans || 0}</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Upcoming Tests</div>
           <div className="text-2xl font-bold text-yellow-600">{metrics?.upcomingTests || 0}</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Recent Failovers</div>
           <div className="text-2xl font-bold text-red-600">{metrics?.recentFailovers || 0}</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Avg RTO</div>
           <div className="text-2xl font-bold text-green-600">{metrics?.averageRTO || 0}m</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Avg RPO</div>
           <div className="text-2xl font-bold text-purple-600">{metrics?.averageRPO || 0}m</div>
         </div>
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-sm text-gray-500">Total Backups</div>
           <div className="text-2xl font-bold text-indigo-600">{metrics?.backupCount || 0}</div>
         </div>
@@ -141,11 +141,11 @@ export const DRPlanning: React.FC = () => {
       <div className="mb-6">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
-            {['plans', 'events', 'backups'].map((tab) => (
+            {(['plans', 'events', 'backups'] as const).map((tab) => (
               <button
                 key={tab}
-                onClick={() => setSelectedTab(tab as any)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                onClick={() => setSelectedTab(tab)}
+                className={`border-b-2 px-1 py-4 text-sm font-medium ${
                   selectedTab === tab
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -160,10 +160,10 @@ export const DRPlanning: React.FC = () => {
 
       {/* Plans Tab */}
       {selectedTab === 'plans' && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="rounded-lg bg-white shadow">
+          <div className="flex items-center justify-between border-b border-gray-200 p-4">
             <h3 className="text-lg font-medium">Disaster Recovery Plans</h3>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            <button className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
               Create Plan
             </button>
           </div>
@@ -174,7 +174,7 @@ export const DRPlanning: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
                       <h4 className="font-medium text-gray-900">{plan.name}</h4>
-                      <span className={`px-2 py-1 rounded text-xs ${getStatusColor('active')}`}>
+                      <span className={`rounded px-2 py-1 text-xs ${getStatusColor('active')}`}>
                         {plan.testSchedule}
                       </span>
                     </div>
@@ -204,17 +204,17 @@ export const DRPlanning: React.FC = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => testMutation.mutate({ planId: plan.planId, testType: 'simulation' })}
-                      className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm"
+                      className="rounded bg-green-100 px-3 py-1 text-sm text-green-700 hover:bg-green-200"
                     >
                       Test (Sim)
                     </button>
                     <button
                       onClick={() => testMutation.mutate({ planId: plan.planId, testType: 'partial' })}
-                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm"
+                      className="rounded bg-blue-100 px-3 py-1 text-sm text-blue-700 hover:bg-blue-200"
                     >
                       Test (Partial)
                     </button>
-                    <button className="px-3 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm">
+                    <button className="rounded bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200">
                       Edit
                     </button>
                   </div>
@@ -227,8 +227,8 @@ export const DRPlanning: React.FC = () => {
 
       {/* Events Tab */}
       {selectedTab === 'events' && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200">
+        <div className="rounded-lg bg-white shadow">
+          <div className="border-b border-gray-200 p-4">
             <h3 className="text-lg font-medium">Failover Events</h3>
           </div>
           <div className="divide-y divide-gray-200">
@@ -242,10 +242,10 @@ export const DRPlanning: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center space-x-3">
-                        <span className={`px-2 py-1 rounded text-xs ${getStatusColor(event.status)}`}>
+                        <span className={`rounded px-2 py-1 text-xs ${getStatusColor(event.status)}`}>
                           {event.status}
                         </span>
-                        <span className={`px-2 py-1 rounded text-xs ${
+                        <span className={`rounded px-2 py-1 text-xs ${
                           event.eventType === 'planned' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'
                         }`}>
                           {event.eventType}
@@ -262,7 +262,7 @@ export const DRPlanning: React.FC = () => {
                     <div className="text-right text-sm">
                       <div className="text-gray-500">Affected Users</div>
                       <div className="font-medium">{event.affectedUsers}</div>
-                      <div className="text-gray-500 mt-1">Data Loss</div>
+                      <div className="mt-1 text-gray-500">Data Loss</div>
                       <div className="font-medium">{event.dataLoss}s</div>
                     </div>
                   </div>
@@ -275,18 +275,18 @@ export const DRPlanning: React.FC = () => {
 
       {/* Backups Tab */}
       {selectedTab === 'backups' && (
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="rounded-lg bg-white shadow">
+          <div className="flex items-center justify-between border-b border-gray-200 p-4">
             <h3 className="text-lg font-medium">Backup Records</h3>
             <button
               onClick={() => backupMutation.mutate({ databaseId: 'db-primary', backupType: 'full' })}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
             >
               Create Backup
             </button>
           </div>
           <div className="p-4">
-            <p className="text-gray-500 text-sm">Backup history and restore points will appear here.</p>
+            <p className="text-sm text-gray-500">Backup history and restore points will appear here.</p>
           </div>
         </div>
       )}

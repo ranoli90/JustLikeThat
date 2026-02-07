@@ -86,13 +86,13 @@ export const MatchingDashboard: React.FC = () => {
   const selectedMatch = matchResults.find(m => m.jobId === selectedJob);
 
   return (
-    <div className="matching-dashboard p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">AI-Powered Job Matching</h2>
+    <div className="matching-dashboard rounded-lg bg-white p-6 shadow-md">
+      <h2 className="mb-4 text-2xl font-bold">AI-Powered Job Matching</h2>
       
       {/* Profile Input Section */}
-      <div className="profile-section mb-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="text-lg font-semibold mb-3">Your Profile</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="profile-section mb-6 rounded-lg bg-gray-50 p-4">
+        <h3 className="mb-3 text-lg font-semibold">Your Profile</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700">Skills (comma-separated)</label>
             <input
@@ -143,7 +143,7 @@ export const MatchingDashboard: React.FC = () => {
         <button
           onClick={handleMatch}
           disabled={isLoading}
-          className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+          className="mt-4 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {isLoading ? 'Analyzing...' : 'Find Matching Jobs'}
         </button>
@@ -152,11 +152,11 @@ export const MatchingDashboard: React.FC = () => {
       {/* Results Section */}
       {matchResults.length > 0 && (
         <div className="results-section">
-          <h3 className="text-lg font-semibold mb-3">Matching Jobs</h3>
+          <h3 className="mb-3 text-lg font-semibold">Matching Jobs</h3>
           
           {/* Match Score Distribution Chart */}
           <div className="mb-6">
-            <h4 className="text-md font-medium mb-2">Match Score Distribution</h4>
+            <h4 className="text-md mb-2 font-medium">Match Score Distribution</h4>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={matchResults.map(r => ({
                 name: `Job ${r.jobId.slice(-4)}`,
@@ -176,20 +176,20 @@ export const MatchingDashboard: React.FC = () => {
           </div>
 
           {/* Job Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {matchResults.map((result) => (
               <div
                 key={result.jobId}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                className={`cursor-pointer rounded-lg border-2 p-4 transition-colors ${
                   selectedJob === result.jobId
                     ? 'border-indigo-500 bg-indigo-50'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
                 onClick={() => setSelectedJob(result.jobId)}
               >
-                <div className="flex justify-between items-center mb-2">
+                <div className="mb-2 flex items-center justify-between">
                   <span className="font-semibold">Job {result.jobId.slice(-4)}</span>
-                  <span className={`px-2 py-1 rounded-full text-sm ${
+                  <span className={`rounded-full px-2 py-1 text-sm ${
                     result.matchScore >= 0.8 ? 'bg-green-100 text-green-800' :
                     result.matchScore >= 0.6 ? 'bg-yellow-100 text-yellow-800' :
                     'bg-red-100 text-red-800'
@@ -197,7 +197,7 @@ export const MatchingDashboard: React.FC = () => {
                     {Math.round(result.matchScore * 100)}% Match
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mb-2">
+                <p className="mb-2 text-sm text-gray-600">
                   Success Probability: {Math.round(result.successProbability * 100)}%
                 </p>
                 <div className="text-xs text-gray-500">
@@ -209,12 +209,12 @@ export const MatchingDashboard: React.FC = () => {
 
           {/* Detailed Analysis */}
           {selectedMatch && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="text-lg font-semibold mb-3">Detailed Analysis: Job {selectedJob?.slice(-4)}</h4>
+            <div className="mt-6 rounded-lg bg-gray-50 p-4">
+              <h4 className="mb-3 text-lg font-semibold">Detailed Analysis: Job {selectedJob?.slice(-4)}</h4>
               
               {/* Match Factors Chart */}
               <div className="mb-4">
-                <h5 className="text-md font-medium mb-2">Match Factor Breakdown</h5>
+                <h5 className="text-md mb-2 font-medium">Match Factor Breakdown</h5>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart
                     data={selectedMatch.factors.map(f => ({
@@ -237,13 +237,13 @@ export const MatchingDashboard: React.FC = () => {
 
               {/* Explanation */}
               <div className="mb-4">
-                <h5 className="text-md font-medium mb-2">AI Analysis</h5>
-                <p className="text-gray-700 mb-2">{selectedMatch.explanation.summary}</p>
+                <h5 className="text-md mb-2 font-medium">AI Analysis</h5>
+                <p className="mb-2 text-gray-700">{selectedMatch.explanation.summary}</p>
                 
                 {selectedMatch.explanation.strengths.length > 0 && (
                   <div className="mb-2">
                     <span className="font-medium text-green-700">✓ Strengths:</span>
-                    <ul className="list-disc list-inside text-sm text-gray-600">
+                    <ul className="list-inside list-disc text-sm text-gray-600">
                       {selectedMatch.explanation.strengths.map((s, i) => (
                         <li key={i}>{s}</li>
                       ))}
@@ -254,7 +254,7 @@ export const MatchingDashboard: React.FC = () => {
                 {selectedMatch.explanation.concerns.length > 0 && (
                   <div className="mb-2">
                     <span className="font-medium text-yellow-700">⚠ Concerns:</span>
-                    <ul className="list-disc list-inside text-sm text-gray-600">
+                    <ul className="list-inside list-disc text-sm text-gray-600">
                       {selectedMatch.explanation.concerns.map((c, i) => (
                         <li key={i}>{c}</li>
                       ))}
@@ -264,12 +264,12 @@ export const MatchingDashboard: React.FC = () => {
               </div>
 
               {/* Skills Comparison */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="mb-4 grid grid-cols-2 gap-4">
                 <div>
                   <h5 className="font-medium text-green-700">Matched Skills</h5>
-                  <div className="flex flex-wrap gap-1 mt-1">
+                  <div className="mt-1 flex flex-wrap gap-1">
                     {selectedMatch.matchedSkills.map((skill, i) => (
-                      <span key={i} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                      <span key={i} className="rounded bg-green-100 px-2 py-1 text-xs text-green-800">
                         {skill}
                       </span>
                     ))}
@@ -277,9 +277,9 @@ export const MatchingDashboard: React.FC = () => {
                 </div>
                 <div>
                   <h5 className="font-medium text-red-700">Missing Skills</h5>
-                  <div className="flex flex-wrap gap-1 mt-1">
+                  <div className="mt-1 flex flex-wrap gap-1">
                     {selectedMatch.missingSkills.map((skill, i) => (
-                      <span key={i} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">
+                      <span key={i} className="rounded bg-red-100 px-2 py-1 text-xs text-red-800">
                         {skill}
                       </span>
                     ))}
@@ -289,8 +289,8 @@ export const MatchingDashboard: React.FC = () => {
 
               {/* Recommendations */}
               <div>
-                <h5 className="font-medium mb-2">Recommendations</h5>
-                <ul className="list-disc list-inside text-sm text-gray-600">
+                <h5 className="mb-2 font-medium">Recommendations</h5>
+                <ul className="list-inside list-disc text-sm text-gray-600">
                   {selectedMatch.recommendations.map((rec, i) => (
                     <li key={i}>{rec}</li>
                   ))}

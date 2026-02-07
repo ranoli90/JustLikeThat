@@ -122,7 +122,7 @@ export const CRMConnector: React.FC<CRMConnectorProps> = ({ onConnect }) => {
               value={config.syncSettings?.frequency || 'realtime'}
               onChange={e => setConfig({
                 ...config,
-                syncSettings: { ...config.syncSettings!, frequency: e.target.value as any }
+                syncSettings: { ...config.syncSettings!, frequency: e.target.value as CRMConfig['syncSettings']['frequency'] }
               })}
             >
               <option value="realtime">Real-time</option>

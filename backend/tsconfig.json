@@ -20,6 +20,11 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "noFallthroughCasesInSwitch": false,
+    "types": ["node", "jest"],
+    "lib": ["ES2023"],
+    "jsx": "react-jsx"
+  },
+  "include": ["src", "test", "**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }

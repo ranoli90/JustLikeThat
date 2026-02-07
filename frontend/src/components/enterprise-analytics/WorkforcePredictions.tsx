@@ -81,7 +81,7 @@ const PredictionCard: React.FC<PredictionCardProps> = ({
             size="small"
             sx={{
               mt: 1,
-              backgroundColor: riskColors[riskLevel] + '20',
+              backgroundColor: `${riskColors[riskLevel]  }20`,
               color: riskColors[riskLevel],
               fontWeight: 'bold',
             }}

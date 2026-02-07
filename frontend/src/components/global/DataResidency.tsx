@@ -77,32 +77,32 @@ export const DataResidency: React.FC = () => {
 
   if (rulesLoading || complianceLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      <div className="flex h-64 items-center justify-center">
+        <div className="size-8 animate-spin rounded-full border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Data Residency Compliance</h1>
         <p className="text-gray-600">Manage data sovereignty rules and compliance across regions</p>
       </div>
 
       {/* Compliance Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-5">
         {compliance?.map((status) => (
           <div
             key={status.region}
-            className={`bg-white rounded-lg shadow p-4 cursor-pointer transition-all hover:shadow-md ${
+            className={`cursor-pointer rounded-lg bg-white p-4 shadow transition-all hover:shadow-md ${
               selectedRegion === status.region ? 'ring-2 ring-blue-500' : ''
             }`}
             onClick={() => setSelectedRegion(selectedRegion === status.region ? null : status.region)}
           >
-            <div className="flex items-center justify-between mb-2">
-              <div className={`w-3 h-3 rounded-full ${getRegionColor(status.region)}`}></div>
-              <span className={`text-xs px-2 py-1 rounded ${
+            <div className="mb-2 flex items-center justify-between">
+              <div className={`size-3 rounded-full ${getRegionColor(status.region)}`}></div>
+              <span className={`rounded px-2 py-1 text-xs ${
                 status.compliant ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
               }`}>
                 {status.compliant ? 'Compliant' : 'Non-Compliant'}
@@ -117,12 +117,12 @@ export const DataResidency: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Rules Table */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div className="rounded-lg bg-white shadow">
+          <div className="flex items-center justify-between border-b border-gray-200 p-4">
             <h3 className="text-lg font-medium">Data Residency Rules</h3>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">
+            <button className="rounded bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600">
               Add Rule
             </button>
           </div>
@@ -130,18 +130,18 @@ export const DataResidency: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Region</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Storage Regions</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Retention</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Required</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Region</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Data Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Storage Regions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Retention</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase text-gray-500">Required</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {rules?.map((rule) => (
                   <tr key={rule.ruleId} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getRegionColor(rule.region)} text-white`}>
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getRegionColor(rule.region)} text-white`}>
                         {rule.region.toUpperCase()}
                       </span>
                     </td>
@@ -149,12 +149,12 @@ export const DataResidency: React.FC = () => {
                     <td className="px-4 py-3 text-sm text-gray-500">
                       <div className="flex flex-wrap gap-1">
                         {rule.storageRegions.slice(0, 2).map((region) => (
-                          <span key={region} className="px-2 py-0.5 bg-gray-100 rounded text-xs">
+                          <span key={region} className="rounded bg-gray-100 px-2 py-0.5 text-xs">
                             {region}
                           </span>
                         ))}
                         {rule.storageRegions.length > 2 && (
-                          <span className="px-2 py-0.5 bg-gray-100 rounded text-xs">
+                          <span className="rounded bg-gray-100 px-2 py-0.5 text-xs">
                             +{rule.storageRegions.length - 2}
                           </span>
                         )}
@@ -176,8 +176,8 @@ export const DataResidency: React.FC = () => {
         </div>
 
         {/* Audit Logs */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b border-gray-200">
+        <div className="rounded-lg bg-white shadow">
+          <div className="border-b border-gray-200 p-4">
             <h3 className="text-lg font-medium">Recent Audit Logs</h3>
           </div>
           <div className="max-h-96 overflow-y-auto">
@@ -193,7 +193,7 @@ export const DataResidency: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <span className="text-lg">{getOperationIcon(log.operation)}</span>
                         <div>
-                          <div className="font-medium text-sm text-gray-900">
+                          <div className="text-sm font-medium text-gray-900">
                             {log.operation.charAt(0).toUpperCase() + log.operation.slice(1)}
                           </div>
                           <div className="text-xs text-gray-500">
@@ -202,7 +202,7 @@ export const DataResidency: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
-                        <span className={`px-2 py-0.5 rounded text-xs ${
+                        <span className={`rounded px-2 py-0.5 text-xs ${
                           log.compliance ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
                           {log.compliance ? 'Compliant' : 'Violation'}

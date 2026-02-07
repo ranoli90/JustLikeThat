@@ -173,14 +173,14 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl">
           <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-1/4 mb-6"></div>
+            <div className="mb-6 h-8 w-1/4 rounded bg-gray-300"></div>
             <div className="space-y-6">
-              <div className="h-48 bg-gray-300 rounded"></div>
-              <div className="h-64 bg-gray-300 rounded"></div>
-              <div className="h-64 bg-gray-300 rounded"></div>
+              <div className="h-48 rounded bg-gray-300"></div>
+              <div className="h-64 rounded bg-gray-300"></div>
+              <div className="h-64 rounded bg-gray-300"></div>
             </div>
           </div>
         </div>
@@ -189,8 +189,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
           <p className="mt-2 text-gray-600">
@@ -273,14 +273,14 @@ export default function ProfilePage() {
                   label="Minimum salary"
                   type="number"
                   value={preferences.minSalary}
-                  onChange={(e) => setPreferences(prev => ({ ...prev, minSalary: parseInt(e.target.value) }))}
+                  onChange={(e) => setPreferences(prev => ({ ...prev, minSalary: parseInt(e.target.value, 10) }))}
                   placeholder="0"
                 />
                 <Input
                   label="Maximum salary"
                   type="number"
                   value={preferences.maxSalary}
-                  onChange={(e) => setPreferences(prev => ({ ...prev, maxSalary: parseInt(e.target.value) }))}
+                  onChange={(e) => setPreferences(prev => ({ ...prev, maxSalary: parseInt(e.target.value, 10) }))}
                   placeholder="100000"
                 />
               </div>
@@ -338,7 +338,7 @@ export default function ProfilePage() {
                 placeholder="e.g. JavaScript, React, Node.js"
               />
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-medium text-gray-700">
                   Resume
                 </label>
                 <div className="flex items-center space-x-4">
@@ -356,12 +356,12 @@ export default function ProfilePage() {
                     type="file"
                     accept=".pdf,.doc,.docx"
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
+                      const file = e.target.files?.at(0);
                       if (file) {
                         handleResumeUpload(file);
                       }
                     }}
-                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
                   />
                 </div>
               </div>
@@ -386,7 +386,7 @@ export default function ProfilePage() {
                 <Button
                   variant="outline"
                   onClick={logout}
-                  className="text-red-600 hover:text-red-700 border-red-300 hover:bg-red-50 focus:ring-red-500"
+                  className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700 focus:ring-red-500"
                 >
                   Sign Out
                 </Button>

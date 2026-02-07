@@ -103,36 +103,36 @@ export const SLODashboard: React.FC = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <div className="flex justify-between items-center mb-6">
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">SLO/SLI Dashboard</h1>
         <button
           onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
         >
           Create SLO
         </button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
+      <div className="mb-6 grid grid-cols-4 gap-4">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-3xl font-bold text-blue-500">{slos.length}</div>
           <div className="text-gray-500">Total SLOs</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-3xl font-bold text-green-500">
             {slos.filter(s => s.status === 'healthy').length}
           </div>
           <div className="text-gray-500">Healthy</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-3xl font-bold text-yellow-500">
             {slos.filter(s => s.status === 'warning').length}
           </div>
           <div className="text-gray-500">Warning</div>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow">
+        <div className="rounded-lg bg-white p-4 shadow">
           <div className="text-3xl font-bold text-red-500">
             {slos.filter(s => s.status === 'critical').length}
           </div>
@@ -142,45 +142,45 @@ export const SLODashboard: React.FC = () => {
 
       {/* Create SLO Form */}
       {showCreateForm && (
-        <div className="mb-6 bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Create SLO</h2>
+        <div className="mb-6 rounded-lg bg-white p-4 shadow">
+          <h2 className="mb-4 text-lg font-semibold">Create SLO</h2>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Name</label>
+              <label className="mb-1 block text-sm font-medium">Name</label>
               <input
                 type="text"
                 value={newSLO.name}
                 onChange={(e) => setNewSLO({ ...newSLO, name: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full rounded border p-2"
                 placeholder="API Availability"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Service Name</label>
+              <label className="mb-1 block text-sm font-medium">Service Name</label>
               <input
                 type="text"
                 value={newSLO.serviceName}
                 onChange={(e) => setNewSLO({ ...newSLO, serviceName: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full rounded border p-2"
                 placeholder="api-service"
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium mb-1">Description</label>
+              <label className="mb-1 block text-sm font-medium">Description</label>
               <textarea
                 value={newSLO.description}
                 onChange={(e) => setNewSLO({ ...newSLO, description: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full rounded border p-2"
                 placeholder="SLO description"
                 rows={2}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">SLI Type</label>
+              <label className="mb-1 block text-sm font-medium">SLI Type</label>
               <select
                 value={newSLO.sliType}
                 onChange={(e) => setNewSLO({ ...newSLO, sliType: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full rounded border p-2"
               >
                 <option value="availability">Availability</option>
                 <option value="latency">Latency</option>
@@ -188,23 +188,23 @@ export const SLODashboard: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Target (%)</label>
+              <label className="mb-1 block text-sm font-medium">Target (%)</label>
               <input
                 type="number"
                 value={newSLO.target}
                 onChange={(e) => setNewSLO({ ...newSLO, target: parseFloat(e.target.value) })}
-                className="w-full p-2 border rounded"
+                className="w-full rounded border p-2"
                 step="0.1"
                 min="0"
                 max="100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Window</label>
+              <label className="mb-1 block text-sm font-medium">Window</label>
               <select
                 value={newSLO.window}
                 onChange={(e) => setNewSLO({ ...newSLO, window: e.target.value })}
-                className="w-full p-2 border rounded"
+                className="w-full rounded border p-2"
               >
                 <option value="30d">30 Days</option>
                 <option value="90d">90 Days</option>
@@ -212,16 +212,16 @@ export const SLODashboard: React.FC = () => {
               </select>
             </div>
           </div>
-          <div className="flex gap-2 mt-4">
+          <div className="mt-4 flex gap-2">
             <button
               onClick={handleCreateSLO}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              className="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600"
             >
               Create
             </button>
             <button
               onClick={() => setShowCreateForm(false)}
-              className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
             >
               Cancel
             </button>
@@ -230,16 +230,16 @@ export const SLODashboard: React.FC = () => {
       )}
 
       {/* SLO List */}
-      <div className="bg-white p-4 rounded-lg shadow">
-        <h2 className="text-lg font-semibold mb-4">Service Level Objectives</h2>
+      <div className="rounded-lg bg-white p-4 shadow">
+        <h2 className="mb-4 text-lg font-semibold">Service Level Objectives</h2>
         {loading ? (
-          <div className="text-center py-4">Loading...</div>
+          <div className="py-4 text-center">Loading...</div>
         ) : (
           <div className="space-y-2">
             {slos.map((slo) => (
               <div
                 key={slo.id}
-                className={`p-4 rounded-lg border ${getStatusBg(slo.status)}`}
+                className={`rounded-lg border p-4 ${getStatusBg(slo.status)}`}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -264,17 +264,17 @@ export const SLODashboard: React.FC = () => {
                       </div>
                       <div className="text-xs text-gray-500">Error Budget</div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBg(slo.status)} ${getStatusColor(slo.status)}`}>
+                    <span className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusBg(slo.status)} ${getStatusColor(slo.status)}`}>
                       {slo.status}
                     </span>
                   </div>
                 </div>
                 <div className="mt-3">
-                  <div className="flex justify-between text-sm mb-1">
+                  <div className="mb-1 flex justify-between text-sm">
                     <span>Progress to target</span>
                     <span>{Math.min(100, (slo.current / slo.target) * 100).toFixed(1)}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="h-2 w-full rounded-full bg-gray-200">
                     <div
                       className={`h-2 rounded-full ${slo.status === 'healthy' ? 'bg-green-500' : slo.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'}`}
                       style={{ width: `${Math.min(100, (slo.current / slo.target) * 100)}%` }}

@@ -78,7 +78,7 @@ export const SyncMonitor: React.FC = () => {
       await fetch(`/api/v1/enterprise-integrations/sync/${logId}/retry`, {
         method: 'POST',
       });
-      alert('Retry initiated');
+      console.log('Retry initiated');
       fetchLogs();
     } catch (error) {
       console.error('Retry failed:', error);

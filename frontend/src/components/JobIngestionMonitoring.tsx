@@ -62,10 +62,10 @@ export function JobIngestionMonitoring() {
     try {
       const response = await fetch('/api/jobs/optimize', { method: 'POST' });
       const result = await response.json();
-      alert(result.message || 'Optimization complete');
+      console.log(result.message || 'Optimization complete');
       fetchData();
     } catch (err) {
-      alert('Optimization failed');
+      console.error('Optimization failed');
     }
   };
 
@@ -74,14 +74,14 @@ export function JobIngestionMonitoring() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 p-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Job Ingestion Monitoring</h1>
         <Button onClick={runOptimization}>Run Optimization</Button>
       </div>
 
       {/* Ingestion Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="p-4 text-center">
           <p className="text-3xl font-bold text-blue-600">{stats?.totalSources || 0}</p>
           <p className="text-sm text-gray-600">Total Sources</p>
@@ -110,7 +110,7 @@ export function JobIngestionMonitoring() {
 
       {/* Cost Overview */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Cost Analysis</h2>
+        <h2 className="mb-4 text-lg font-semibold">Cost Analysis</h2>
         <div className="grid grid-cols-2 gap-6">
           <div>
             <p className="text-sm text-gray-600">Daily Cost</p>
@@ -124,7 +124,7 @@ export function JobIngestionMonitoring() {
         
         {costs?.bySource && costs.bySource.length > 0 && (
           <div className="mt-4">
-            <h3 className="text-sm font-medium mb-2">Cost by Source</h3>
+            <h3 className="mb-2 text-sm font-medium">Cost by Source</h3>
             <div className="space-y-2">
               {costs.bySource.map(source => (
                 <div key={source.sourceId} className="flex items-center justify-between">
@@ -146,24 +146,24 @@ export function JobIngestionMonitoring() {
 
       {/* Rate Limits */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Rate Limits</h2>
+        <h2 className="mb-4 text-lg font-semibold">Rate Limits</h2>
         <RateLimitsDisplay />
       </Card>
 
       {/* Recommendations */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Optimization Recommendations</h2>
+        <h2 className="mb-4 text-lg font-semibold">Optimization Recommendations</h2>
         {recommendations.length > 0 ? (
           <div className="space-y-3">
             {recommendations.map((rec, idx) => (
               <div
                 key={idx}
-                className={`p-3 rounded border ${
+                className={`rounded border p-3 ${
                   rec.priority === 'high'
-                    ? 'bg-red-50 border-red-200'
+                    ? 'border-red-200 bg-red-50'
                     : rec.priority === 'medium'
-                    ? 'bg-yellow-50 border-yellow-200'
-                    : 'bg-blue-50 border-blue-200'
+                    ? 'border-yellow-200 bg-yellow-50'
+                    : 'border-blue-200 bg-blue-50'
                 }`}
               >
                 <p className="text-sm">{rec.recommendation}</p>
@@ -177,7 +177,7 @@ export function JobIngestionMonitoring() {
 
       {/* Recent Ingestion Logs */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Recent Ingestion Activity</h2>
+        <h2 className="mb-4 text-lg font-semibold">Recent Ingestion Activity</h2>
         <IngestionLogsList />
       </Card>
     </div>
@@ -200,7 +200,7 @@ function RateLimitsDisplay() {
         <div key={sourceId} className="flex items-center justify-between">
           <span className="font-medium">{sourceId}</span>
           <div className="flex items-center space-x-3">
-            <div className="w-32 bg-gray-200 rounded-full h-2">
+            <div className="h-2 w-32 rounded-full bg-gray-200">
               <div
                 className={`h-2 rounded-full ${
                   (limit.remaining / limit.limit) < 0.2
@@ -212,7 +212,7 @@ function RateLimitsDisplay() {
                 style={{ width: `${Math.min(100, (limit.remaining / limit.limit) * 100)}%` }}
               />
             </div>
-            <span className="text-sm text-gray-600 w-24 text-right">
+            <span className="w-24 text-right text-sm text-gray-600">
               {limit.remaining}/{limit.limit}
             </span>
           </div>
@@ -235,7 +235,7 @@ function IngestionLogsList() {
   return (
     <div className="space-y-2">
       {logs.map((log: any) => (
-        <div key={log.id} className="flex items-center justify-between p-2 border rounded">
+        <div key={log.id} className="flex items-center justify-between rounded border p-2">
           <div>
             <p className="font-medium">{log.jobSourceId}</p>
             <p className="text-sm text-gray-600">
@@ -245,7 +245,7 @@ function IngestionLogsList() {
           <div className="flex items-center space-x-4">
             <span className="text-green-600">{log.jobsIngested || 0} ingested</span>
             <span className="text-yellow-600">{log.jobsDuplicated || 0} dupes</span>
-            <span className={`px-2 py-0.5 text-xs rounded ${
+            <span className={`rounded px-2 py-0.5 text-xs ${
               log.status === 'SUCCESS'
                 ? 'bg-green-100 text-green-800'
                 : log.status === 'FAILED'

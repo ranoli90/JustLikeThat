@@ -78,14 +78,14 @@ export const UsageTracker: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Usage Tracking</h1>
         <div className="flex gap-2">
           {(['7d', '30d', '90d'] as const).map(range => (
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-3 py-1 rounded text-sm ${timeRange === range ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
+              className={`rounded px-3 py-1 text-sm ${timeRange === range ? 'bg-blue-500 text-white' : 'bg-gray-100'}`}
             >
               {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
             </button>
@@ -98,32 +98,32 @@ export const UsageTracker: React.FC<{ tenantId: string }> = ({ tenantId }) => {
       ) : (
         <>
           {/* Usage Summary */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+          <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
             {Object.entries(summary).map(([metric, value]) => (
               <Card key={metric} className="p-4">
-                <div className={`w-2 h-8 rounded ${metricCategories[metric]?.color || 'bg-gray-500'} mb-2`} />
-                <h3 className="text-gray-500 text-sm">{metricCategories[metric]?.label || metric}</h3>
-                <p className="text-2xl font-bold">{formatNumber(value as number)}</p>
+                <div className={`h-8 w-2 rounded ${metricCategories[metric]?.color || 'bg-gray-500'} mb-2`} />
+                <h3 className="text-sm text-gray-500">{metricCategories[metric]?.label || metric}</h3>
+                <p className="text-2xl font-bold">{formatNumber(value)}</p>
               </Card>
             ))}
           </div>
 
           {/* Usage Chart Placeholder */}
-          <Card className="p-4 mb-6">
-            <h3 className="font-semibold mb-4">Usage Over Time</h3>
-            <div className="h-48 flex items-end justify-between gap-1">
+          <Card className="mb-6 p-4">
+            <h3 className="mb-4 font-semibold">Usage Over Time</h3>
+            <div className="flex h-48 items-end justify-between gap-1">
               {Array.from({ length: 30 }).map((_, i) => {
                 const height = Math.random() * 100;
                 return (
                   <div
                     key={i}
-                    className="flex-1 bg-blue-500 rounded-t"
+                    className="flex-1 rounded-t bg-blue-500"
                     style={{ height: `${height}%` }}
                   />
                 );
               })}
             </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-2">
+            <div className="mt-2 flex justify-between text-xs text-gray-500">
               <span>{new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</span>
               <span>{new Date().toLocaleDateString()}</span>
             </div>
@@ -131,30 +131,30 @@ export const UsageTracker: React.FC<{ tenantId: string }> = ({ tenantId }) => {
 
           {/* Usage Details */}
           <Card className="p-4">
-            <h3 className="font-semibold mb-4">Detailed Usage</h3>
+            <h3 className="mb-4 font-semibold">Detailed Usage</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2 px-4">Metric</th>
-                    <th className="text-left py-2 px-4">Type</th>
-                    <th className="text-right py-2 px-4">Quantity</th>
-                    <th className="text-left py-2 px-4">Period</th>
+                    <th className="px-4 py-2 text-left">Metric</th>
+                    <th className="px-4 py-2 text-left">Type</th>
+                    <th className="px-4 py-2 text-right">Quantity</th>
+                    <th className="px-4 py-2 text-left">Period</th>
                   </tr>
                 </thead>
                 <tbody>
                   {usage.slice(0, 20).map((item, i) => (
                     <tr key={i} className="border-b last:border-0">
-                      <td className="py-2 px-4">{item.metricName}</td>
-                      <td className="py-2 px-4">
-                        <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+                      <td className="px-4 py-2">{item.metricName}</td>
+                      <td className="px-4 py-2">
+                        <span className="rounded bg-gray-100 px-2 py-1 text-xs">
                           {item.metricType}
                         </span>
                       </td>
-                      <td className="py-2 px-4 text-right font-semibold">
+                      <td className="px-4 py-2 text-right font-semibold">
                         {formatNumber(item.quantity)}
                       </td>
-                      <td className="py-2 px-4 text-sm text-gray-500">
+                      <td className="px-4 py-2 text-sm text-gray-500">
                         {new Date(item.periodStart).toLocaleDateString()} - {new Date(item.periodEnd).toLocaleDateString()}
                       </td>
                     </tr>

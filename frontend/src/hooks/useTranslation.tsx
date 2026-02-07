@@ -72,7 +72,7 @@ export const TranslationProvider: React.FC<TranslationProviderProps> = ({
   // Detect language from browser settings
   useEffect(() => {
     const detectLanguage = () => {
-      const browserLang = navigator.language.split('-')[0];
+      const [browserLang] = navigator.language.split('-');
       const savedLocale = localStorage.getItem('locale');
 
       if (savedLocale && availableLocales.some((l: Locale) => l.code === savedLocale)) {

@@ -150,12 +150,12 @@ class LTSService {
     metricsByService: Record<string, { compliance: number; status: string }>;
   }> {
     const params = tenantId ? `?tenantId=${tenantId}` : '';
-    return api.get<any>(`${this.baseUrl}/sla/dashboard${params}`);
+    return api.get<unknown>(`${this.baseUrl}/sla/dashboard${params}`);
   }
 
   async getSLARecommendations(tenantId?: string): Promise<Array<{ type: string; description: string; priority: string; expectedImprovement: number }>> {
     const params = tenantId ? `?tenantId=${tenantId}` : '';
-    return api.get<any[]>(`${this.baseUrl}/sla/recommendations${params}`);
+    return api.get<unknown[]>(`${this.baseUrl}/sla/recommendations${params}`);
   }
 
   // Capacity Endpoints
@@ -163,26 +163,26 @@ class LTSService {
     return api.get<CapacityMetrics>(`${this.baseUrl}/capacity/current`);
   }
 
-  async getCapacityPredictions(options?: { horizonMonths?: number; resourceTypes?: string[] }): Promise<any[]> {
+  async getCapacityPredictions(options?: { horizonMonths?: number; resourceTypes?: string[] }): Promise<unknown[]> {
     const params = new URLSearchParams();
     if (options?.horizonMonths) params.append('horizonMonths', options.horizonMonths.toString());
-    return api.get<any[]>(`${this.baseUrl}/capacity/predictions?${params}`);
+    return api.get<unknown[]>(`${this.baseUrl}/capacity/predictions?${params}`);
   }
 
-  async getCapacityRecommendations(): Promise<any[]> {
-    return api.get<any[]>(`${this.baseUrl}/capacity/recommendations`);
+  async getCapacityRecommendations(): Promise<unknown[]> {
+    return api.get<unknown[]>(`${this.baseUrl}/capacity/recommendations`);
   }
 
-  async getAutoScalingRecommendations(): Promise<{ scalingRules: any[]; estimatedSavings: number }> {
-    return api.get<any>(`${this.baseUrl}/capacity/autoscaling`);
+  async getAutoScalingRecommendations(): Promise<{ scalingRules: unknown[]; estimatedSavings: number }> {
+    return api.get<unknown>(`${this.baseUrl}/capacity/autoscaling`);
   }
 
   // Cost Endpoints
-  async getCostRecords(options?: { tenantId?: string; serviceName?: string; startDate?: string; endDate?: string }): Promise<any[]> {
+  async getCostRecords(options?: { tenantId?: string; serviceName?: string; startDate?: string; endDate?: string }): Promise<unknown[]> {
     const params = new URLSearchParams();
     if (options?.tenantId) params.append('tenantId', options.tenantId);
     if (options?.serviceName) params.append('serviceName', options.serviceName);
-    return api.get<any[]>(`${this.baseUrl}/cost/records?${params}`);
+    return api.get<unknown[]>(`${this.baseUrl}/cost/records?${params}`);
   }
 
   async getCostSummary(tenantId?: string): Promise<CostSummary> {
@@ -190,21 +190,21 @@ class LTSService {
     return api.get<CostSummary>(`${this.baseUrl}/cost/summary${params}`);
   }
 
-  async getCostForecasts(options?: { tenantId?: string; horizonMonths?: number }): Promise<any[]> {
+  async getCostForecasts(options?: { tenantId?: string; horizonMonths?: number }): Promise<unknown[]> {
     const params = new URLSearchParams();
     if (options?.tenantId) params.append('tenantId', options.tenantId);
     if (options?.horizonMonths) params.append('horizonMonths', options.horizonMonths.toString());
-    return api.get<any[]>(`${this.baseUrl}/cost/forecasts?${params}`);
+    return api.get<unknown[]>(`${this.baseUrl}/cost/forecasts?${params}`);
   }
 
-  async getCostAnomalies(tenantId?: string): Promise<any[]> {
+  async getCostAnomalies(tenantId?: string): Promise<unknown[]> {
     const params = tenantId ? `?tenantId=${tenantId}` : '';
-    return api.get<any[]>(`${this.baseUrl}/cost/anomalies${params}`);
+    return api.get<unknown[]>(`${this.baseUrl}/cost/anomalies${params}`);
   }
 
-  async getCostReductionRecommendations(tenantId?: string): Promise<any[]> {
+  async getCostReductionRecommendations(tenantId?: string): Promise<unknown[]> {
     const params = tenantId ? `?tenantId=${tenantId}` : '';
-    return api.get<any[]>(`${this.baseUrl}/cost/recommendations${params}`);
+    return api.get<unknown[]>(`${this.baseUrl}/cost/recommendations${params}`);
   }
 
   // Roadmap Endpoints
@@ -223,12 +223,12 @@ class LTSService {
     return api.post<TechnologyRoadmap>(`${this.baseUrl}/roadmap/${id}/status`, { status });
   }
 
-  async getRoadmapSummary(): Promise<any> {
-    return api.get<any>(`${this.baseUrl}/roadmap/summary`);
+  async getRoadmapSummary(): Promise<unknown> {
+    return api.get<unknown>(`${this.baseUrl}/roadmap/summary`);
   }
 
-  async getTechnologyAssessment(): Promise<any> {
-    return api.get<any>(`${this.baseUrl}/roadmap/assessment`);
+  async getTechnologyAssessment(): Promise<unknown> {
+    return api.get<unknown>(`${this.baseUrl}/roadmap/assessment`);
   }
 
   // Feedback Endpoints
@@ -238,7 +238,7 @@ class LTSService {
     if (options?.feedbackType) params.append('feedbackType', options.feedbackType);
     if (options?.status) params.append('status', options.status);
     if (options?.limit) params.append('limit', options.limit.toString());
-    return api.get<any>(`${this.baseUrl}/feedback?${params}`);
+    return api.get<{ feedback: UserFeedback[]; total: number }>(`${this.baseUrl}/feedback?${params}`);
   }
 
   async createFeedback(feedback: Partial<UserFeedback>): Promise<UserFeedback> {
@@ -254,11 +254,11 @@ class LTSService {
     return api.get<NPSMetrics>(`${this.baseUrl}/nps/metrics`);
   }
 
-  async createNPSSurvey(userId: string): Promise<any> {
+  async createNPSSurvey(userId: string): Promise<unknown> {
     return api.post(`${this.baseUrl}/nps`, { userId });
   }
 
-  async submitNPSResponse(id: string, score: number, comments?: string): Promise<any> {
+  async submitNPSResponse(id: string, score: number, comments?: string): Promise<unknown> {
     return api.post(`${this.baseUrl}/nps/${id}/respond`, { score, comments });
   }
 
@@ -267,7 +267,7 @@ class LTSService {
     const params = new URLSearchParams();
     if (options?.category) params.append('category', options.category);
     if (options?.status) params.append('status', options.status);
-    return api.get<any>(`${this.baseUrl}/improvements?${params}`);
+    return api.get<unknown>(`${this.baseUrl}/improvements?${params}`);
   }
 
   async createImprovement(initiative: Partial<ImprovementInitiative>): Promise<ImprovementInitiative> {
@@ -278,30 +278,30 @@ class LTSService {
     return api.post<ImprovementInitiative>(`${this.baseUrl}/improvements/${id}/complete`, { metricsAfter, actualCost });
   }
 
-  async getImprovementMetrics(): Promise<any> {
-    return api.get<any>(`${this.baseUrl}/improvements/metrics`);
+  async getImprovementMetrics(): Promise<unknown> {
+    return api.get<unknown>(`${this.baseUrl}/improvements/metrics`);
   }
 
-  async getROITracking(): Promise<any> {
-    return api.get<any>(`${this.baseUrl}/improvements/roi`);
+  async getROITracking(): Promise<unknown> {
+    return api.get<unknown>(`${this.baseUrl}/improvements/roi`);
   }
 
-  async getAutomatedSuggestions(): Promise<any[]> {
-    return api.get<any[]>(`${this.baseUrl}/improvements/suggestions`);
+  async getAutomatedSuggestions(): Promise<unknown[]> {
+    return api.get<unknown[]>(`${this.baseUrl}/improvements/suggestions`);
   }
 
   // Benchmark Endpoints
-  async getBenchmarks(category?: string): Promise<any[]> {
+  async getBenchmarks(category?: string): Promise<unknown[]> {
     const params = category ? `?category=${category}` : '';
-    return api.get<any[]>(`${this.baseUrl}/benchmarks${params}`);
+    return api.get<unknown[]>(`${this.baseUrl}/benchmarks${params}`);
   }
 
-  async createBenchmark(benchmark: Partial<any>): Promise<any> {
+  async createBenchmark(benchmark: Partial<unknown>): Promise<unknown> {
     return api.post(`${this.baseUrl}/benchmarks`, benchmark);
   }
 
-  async compareWithBenchmarks(): Promise<any> {
-    return api.get<any>(`${this.baseUrl}/benchmarks/compare`);
+  async compareWithBenchmarks(): Promise<unknown> {
+    return api.get<unknown>(`${this.baseUrl}/benchmarks/compare`);
   }
 }
 

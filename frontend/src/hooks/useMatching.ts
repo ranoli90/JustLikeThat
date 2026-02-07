@@ -193,7 +193,7 @@ export function useMatching() {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/recommendations/similar/${jobPostingId}/${personaId}${limit ? `?limit=${limit}` : ''}`
+        API_BASE + '/recommendations/similar/' + jobPostingId + '/' + personaId + (limit ? '?limit=' + limit : '')
       );
       if (!response.ok) throw new Error('Failed to fetch similar jobs');
       return response.json();
@@ -213,7 +213,7 @@ export function useMatching() {
     setError(null);
     try {
       const response = await fetch(
-        `${API_BASE}/recommendations/career-growth/${personaId}${limit ? `?limit=${limit}` : ''}`
+        API_BASE + '/recommendations/career-growth/' + personaId + (limit ? '?limit=' + limit : '')
       );
       if (!response.ok) throw new Error('Failed to fetch career growth recommendations');
       return response.json();
@@ -242,8 +242,8 @@ export function useMatching() {
   }, []);
 
   const rankJobs = useCallback(async (
-    persona: any,
-    jobPostings: any[]
+    persona: Record<string, unknown>,
+    jobPostings: Record<string, unknown>[]
   ): Promise<LTRMatchResult[]> => {
     setLoading(true);
     setError(null);
@@ -308,9 +308,9 @@ export function useMatching() {
   }, []);
 
   const predictCareerTrajectory = useCallback(async (
-    persona: any,
-    jobPosting: any
-  ): Promise<any | null> => {
+    persona: Record<string, unknown>,
+    jobPosting: Record<string, unknown>
+  ): Promise<Record<string, unknown> | null> => {
     try {
       const response = await fetch(`${API_BASE}/career/trajectory`, {
         method: 'POST',

@@ -33,20 +33,20 @@ const BenchmarkComparison: React.FC = () => {
 
   return (
     <div className="lts-benchmarks p-6">
-      <h1 className="text-2xl font-bold mb-6">Benchmark Comparison</h1>
+      <h1 className="mb-6 text-2xl font-bold">Benchmark Comparison</h1>
 
       {comparison && (
         <div className="space-y-6">
           {/* Overall Score */}
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <div className="text-sm text-gray-500 mb-2">Overall Benchmark Score</div>
+          <div className="rounded-lg bg-white p-6 text-center shadow">
+            <div className="mb-2 text-sm text-gray-500">Overall Benchmark Score</div>
             <div className="text-5xl font-bold text-blue-600">{comparison.overallScore}%</div>
-            <div className="text-sm text-gray-400 mt-2">Based on industry standards</div>
+            <div className="mt-2 text-sm text-gray-400">Based on industry standards</div>
           </div>
 
           {/* Comparison Table */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="p-4 border-b">
+          <div className="overflow-hidden rounded-lg bg-white shadow">
+            <div className="border-b p-4">
               <h3 className="font-semibold">Performance vs Benchmarks</h3>
             </div>
             <table className="w-full">
@@ -78,11 +78,11 @@ const BenchmarkComparison: React.FC = () => {
           </div>
 
           {/* Recommendations */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-semibold mb-4">Improvement Areas</h3>
+          <div className="rounded-lg bg-white p-4 shadow">
+            <h3 className="mb-4 font-semibold">Improvement Areas</h3>
             <ul className="space-y-2">
               {comparison.recommendations?.map((rec: string, i: number) => (
-                <li key={i} className="flex items-start gap-2 p-2 bg-yellow-50 rounded">
+                <li key={i} className="flex items-start gap-2 rounded bg-yellow-50 p-2">
                   <span className="text-yellow-600">⚠</span>
                   <span>{rec}</span>
                 </li>
@@ -91,13 +91,13 @@ const BenchmarkComparison: React.FC = () => {
           </div>
 
           {/* Stored Benchmarks */}
-          <div className="bg-white rounded-lg shadow p-4">
-            <h3 className="font-semibold mb-4">Stored Benchmarks</h3>
+          <div className="rounded-lg bg-white p-4 shadow">
+            <h3 className="mb-4 font-semibold">Stored Benchmarks</h3>
             <div className="grid grid-cols-3 gap-4">
               {benchmarks.map((bench) => (
-                <div key={bench.id} className="border rounded p-3">
+                <div key={bench.id} className="rounded border p-3">
                   <div className="font-medium">{bench.name}</div>
-                  <div className="text-sm text-gray-500 capitalize">{bench.category}</div>
+                  <div className="text-sm capitalize text-gray-500">{bench.category}</div>
                   <div className="text-xs text-gray-400">{bench.source}</div>
                 </div>
               ))}

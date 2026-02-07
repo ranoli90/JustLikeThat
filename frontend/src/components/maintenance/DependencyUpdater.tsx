@@ -171,12 +171,12 @@ export const DependencyUpdater: React.FC = () => {
                   <td style={{ padding: '12px 16px' }}>{dep.currentVersion}</td>
                   <td style={{ padding: '12px 16px', color: '#16a34a', fontWeight: 'bold' }}>{dep.latestVersion}</td>
                   <td style={{ padding: '12px 16px' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: getCompatibilityColor(dep.compatibility) + '20', color: getCompatibilityColor(dep.compatibility) }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: `${getCompatibilityColor(dep.compatibility)  }20`, color: getCompatibilityColor(dep.compatibility) }}>
                       {dep.compatibility}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: getStatusColor(dep.status) + '20', color: getStatusColor(dep.status) }}>
+                    <span style={{ padding: '2px 8px', borderRadius: '12px', fontSize: '12px', background: `${getStatusColor(dep.status)  }20`, color: getStatusColor(dep.status) }}>
                       {dep.status}
                     </span>
                   </td>

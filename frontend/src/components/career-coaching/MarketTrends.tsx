@@ -180,8 +180,8 @@ export const MarketTrends: React.FC = () => {
                       <span className="data-value">
                         {typeof value === 'number' && (key.includes('salary') || key.includes('growth') || key.includes('demand'))
                           ? key.includes('salary')
-                            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value as number)
-                            : `${((value as number) * 100).toFixed(1)}%`
+                            ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)
+                            : `${(value * 100).toFixed(1)}%`
                           : String(value)}
                       </span>
                     </div>

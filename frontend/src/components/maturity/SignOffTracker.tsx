@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SignOffAPI } from '../../services/maturity.service';
+import { PromptModal } from '../modals/PromptModal';
 
 interface SignOff {
   id: string;
@@ -11,6 +12,7 @@ interface SignOff {
   evidence?: any;
   approvedAt?: string;
   expiresAt?: string;
+  createdAt?: string;
 }
 
 export const SignOffTracker: React.FC = () => {
@@ -20,6 +22,10 @@ export const SignOffTracker: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ stakeholderType: '', area: '', status: '' });
   const [selectedSignOff, setSelectedSignOff] = useState<SignOff | null>(null);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [approveItemId, setApproveItemId] = useState<string | null>(null);
+  const [rejectItemId, setRejectItemId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSignOffs();
@@ -43,27 +49,41 @@ export const SignOffTracker: React.FC = () => {
   };
 
   const handleApprove = async (id: string) => {
-    const comments = prompt('Enter approval comments (optional):');
-    try {
-      await SignOffAPI.approve(id, { comments: comments || undefined, evidence: { timestamp: new Date().toISOString() } });
-      alert('Sign-off approved successfully!');
-      loadSignOffs();
-    } catch (error) {
-      console.error('Failed to approve sign-off:', error);
+    setApproveItemId(id);
+    setShowApproveModal(true);
+  };
+
+  const confirmApprove = async (comments: string) => {
+    setShowApproveModal(false);
+    if (approveItemId) {
+      try {
+        await SignOffAPI.approve(approveItemId, { comments: comments || undefined, evidence: { timestamp: new Date().toISOString() } });
+        console.log('Sign-off approved successfully!');
+        loadSignOffs();
+      } catch (error) {
+        console.error('Failed to approve sign-off:', error);
+      }
     }
+    setApproveItemId(null);
   };
 
   const handleReject = async (id: string) => {
-    const comments = prompt('Enter rejection reason:');
-    if (comments) {
+    setRejectItemId(id);
+    setShowRejectModal(true);
+  };
+
+  const confirmReject = async (comments: string) => {
+    setShowRejectModal(false);
+    if (comments && rejectItemId) {
       try {
-        await SignOffAPI.reject(id, { comments });
-        alert('Sign-off rejected');
+        await SignOffAPI.reject(rejectItemId, { comments });
+        console.log('Sign-off rejected');
         loadSignOffs();
       } catch (error) {
         console.error('Failed to reject sign-off:', error);
       }
     }
+    setRejectItemId(null);
   };
 
   const stakeholderTypes = ['executive', 'engineering', 'security', 'compliance', 'operations', 'product'];
@@ -83,10 +103,10 @@ export const SignOffTracker: React.FC = () => {
         <div className="overall-status">
           <h2>Platform Sign-Off Status</h2>
           <div className="status-grid">
-            {Object.entries(overallStatus).map(([area, status]) => (
-              <div key={area} className={`status-card ${status as string}`}>
+            {Object.entries(overallStatus).map(([area, statusValue]) => (
+              <div key={area} className={`status-card ${String(statusValue)}`}>
                 <h4>{area}</h4>
-                <span className={`badge ${status}`}>{status as string}</span>
+                <span className={`badge ${statusValue}`}>{String(statusValue)}</span>
               </div>
             ))}
           </div>
@@ -170,7 +190,7 @@ export const SignOffTracker: React.FC = () => {
             <div><strong>Stakeholder ID:</strong> {selectedSignOff.stakeholderId}</div>
             <div><strong>Area:</strong> {selectedSignOff.area}</div>
             <div><strong>Status:</strong> {selectedSignOff.status}</div>
-            <div><strong>Created:</strong> {new Date((selectedSignOff as any).createdAt || Date.now()).toLocaleString()}</div>
+            <div><strong>Created:</strong> {new Date(selectedSignOff.createdAt || Date.now()).toLocaleString()}</div>
             {selectedSignOff.approvedAt && (
               <div><strong>Approved At:</strong> {new Date(selectedSignOff.approvedAt).toLocaleString()}</div>
             )}
@@ -186,6 +206,30 @@ export const SignOffTracker: React.FC = () => {
           )}
         </div>
       )}
+
+      <PromptModal
+        isOpen={showApproveModal}
+        title="Approve Sign-Off"
+        message="Enter approval comments (optional):"
+        defaultValue=""
+        onConfirm={confirmApprove}
+        onCancel={() => {
+          setShowApproveModal(false);
+          setApproveItemId(null);
+        }}
+      />
+
+      <PromptModal
+        isOpen={showRejectModal}
+        title="Reject Sign-Off"
+        message="Enter rejection reason:"
+        defaultValue=""
+        onConfirm={confirmReject}
+        onCancel={() => {
+          setShowRejectModal(false);
+          setRejectItemId(null);
+        }}
+      />
     </div>
   );
 };

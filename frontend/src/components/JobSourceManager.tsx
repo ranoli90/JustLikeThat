@@ -108,18 +108,18 @@ export function JobSourceManager() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold mb-4">Job Source Management</h1>
+    <div className="space-y-6 p-6">
+      <h1 className="mb-4 text-2xl font-bold">Job Source Management</h1>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <div className="rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
           {error}
         </div>
       )}
 
       {/* Cost Overview */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Cost Overview</h2>
+        <h2 className="mb-4 text-lg font-semibold">Cost Overview</h2>
         <div className="grid grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold">${(Object.values(costs).reduce((acc, c) => acc + c.dailyCost, 0) / 100).toFixed(2)}</p>
@@ -142,8 +142,8 @@ export function JobSourceManager() {
 
       {/* Available Integrations */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Available Integrations</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <h2 className="mb-4 text-lg font-semibold">Available Integrations</h2>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {availableIntegrations.map(integration => {
             const source = sources.find(s => s.name.toLowerCase().includes(integration.id.toLowerCase()));
             const isEnabled = source?.isAllowed || false;
@@ -152,21 +152,21 @@ export function JobSourceManager() {
             return (
               <div
                 key={integration.id}
-                className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                className={`cursor-pointer rounded-lg border p-4 transition-colors ${
                   isEnabled ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-blue-300'
                 }`}
                 onClick={() => toggleSource(source?.id || integration.id, !isEnabled)}
               >
-                <div className="flex justify-between items-start mb-2">
+                <div className="mb-2 flex items-start justify-between">
                   <h3 className="font-medium">{integration.name}</h3>
-                  <span className={`px-2 py-0.5 text-xs rounded ${
+                  <span className={`rounded px-2 py-0.5 text-xs ${
                     integration.free ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                   }`}>
                     {integration.free ? 'Free' : 'Paid'}
                   </span>
                 </div>
                 
-                <div className="text-sm text-gray-600 space-y-1">
+                <div className="space-y-1 text-sm text-gray-600">
                   <p>Category: {integration.category}</p>
                   <p>Auth: {integration.auth ? 'Required' : 'Not required'}</p>
                   <p>Cost: {integration.cost}</p>
@@ -186,7 +186,7 @@ export function JobSourceManager() {
       {/* Source Configuration */}
       {selectedSource && (
         <Card className="p-4">
-          <h2 className="text-lg font-semibold mb-4">Configure Source</h2>
+          <h2 className="mb-4 text-lg font-semibold">Configure Source</h2>
           <SourceConfigForm 
             sourceId={selectedSource} 
             onClose={() => setSelectedSource(null)}
@@ -196,15 +196,15 @@ export function JobSourceManager() {
 
       {/* Rate Limits by Source */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Rate Limits</h2>
+        <h2 className="mb-4 text-lg font-semibold">Rate Limits</h2>
         <div className="space-y-2">
           {Object.entries(rateLimits).map(([sourceId, limit]) => (
-            <div key={sourceId} className="flex items-center justify-between p-2 border rounded">
+            <div key={sourceId} className="flex items-center justify-between rounded border p-2">
               <span className="font-medium">{sourceId}</span>
               <div className="flex items-center space-x-4">
-                <div className="w-48 bg-gray-200 rounded-full h-2">
+                <div className="h-2 w-48 rounded-full bg-gray-200">
                   <div
-                    className="bg-blue-600 h-2 rounded-full"
+                    className="h-2 rounded-full bg-blue-600"
                     style={{ width: `${(limit.remaining / limit.limit) * 100}%` }}
                   />
                 </div>
@@ -219,11 +219,11 @@ export function JobSourceManager() {
 
       {/* Compliance Matrix */}
       <Card className="p-4">
-        <h2 className="text-lg font-semibold mb-4">Compliance Levels</h2>
+        <h2 className="mb-4 text-lg font-semibold">Compliance Levels</h2>
         <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 bg-green-50 border border-green-200 rounded">
-            <h3 className="font-medium text-green-800 mb-2">High Compliance</h3>
-            <ul className="text-sm text-green-700 space-y-1">
+          <div className="rounded border border-green-200 bg-green-50 p-4">
+            <h3 className="mb-2 font-medium text-green-800">High Compliance</h3>
+            <ul className="space-y-1 text-sm text-green-700">
               <li>• LinkedIn</li>
               <li>• Indeed</li>
               <li>• Greenhouse</li>
@@ -231,18 +231,18 @@ export function JobSourceManager() {
               <li>• Workday</li>
             </ul>
           </div>
-          <div className="p-4 bg-yellow-50 border border-yellow-200 rounded">
-            <h3 className="font-medium text-yellow-800 mb-2">Medium Compliance</h3>
-            <ul className="text-sm text-yellow-700 space-y-1">
+          <div className="rounded border border-yellow-200 bg-yellow-50 p-4">
+            <h3 className="mb-2 font-medium text-yellow-800">Medium Compliance</h3>
+            <ul className="space-y-1 text-sm text-yellow-700">
               <li>• Glassdoor</li>
               <li>• Remote.co</li>
               <li>• AngelList</li>
               <li>• Dice</li>
             </ul>
           </div>
-          <div className="p-4 bg-red-50 border border-red-200 rounded">
-            <h3 className="font-medium text-red-800 mb-2">Low Compliance</h3>
-            <ul className="text-sm text-red-700 space-y-1">
+          <div className="rounded border border-red-200 bg-red-50 p-4">
+            <h3 className="mb-2 font-medium text-red-800">Low Compliance</h3>
+            <ul className="space-y-1 text-sm text-red-700">
               <li>• Generic Scrapers</li>
               <li>• TechCrunch</li>
               <li>• We Work Remotely</li>
